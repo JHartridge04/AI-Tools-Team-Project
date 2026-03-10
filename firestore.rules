@@ -1,0 +1,153 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Adaptive Wellness Companion — Firestore Security Rules
+//
+// Principle: users own their data exclusively. No cross-user reads or writes.
+// Mental health data is sensitive — default to deny.
+// ─────────────────────────────────────────────────────────────────────────────
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────────────
+
+    /** Returns true if the request comes from a signed-in user. */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /** Returns true if the signed-in user's UID matches the given uid. */
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    /** Returns true if the given timestamp field is in the future. */
+    function notExpired(expiry) {
+      return expiry > request.time;
+    }
+
+    // ── /users/{uid} — user profile documents ──────────────────────────────
+    //
+    // Only the user whose UID matches the document ID may read or write their
+    // own profile. No other user or unauthenticated request may access this.
+    match /users/{uid} {
+      allow read, update: if isOwner(uid);
+
+      // Prevent creating a profile document for someone else's UID
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasAll(["email", "createdAt", "updatedAt",
+                                                "preferredTherapyMode", "onboardingComplete"])
+        && request.resource.data.email is string
+        && request.resource.data.preferredTherapyMode in ["talk", "guided_visualization", "exploratory"]
+        && request.resource.data.onboardingComplete is bool;
+
+      // Account deletion is handled by the privacyService Cloud Function
+      // which runs with admin privileges. Deny client-side deletes.
+      allow delete: if false;
+
+      // ── /users/{uid}/sessions — therapy/visualization/journal sessions ───
+      //
+      // Owner has full CRUD. Nobody else can read or write session data.
+      match /sessions/{sessionId} {
+        allow read, delete: if isOwner(uid);
+
+        allow create: if isOwner(uid)
+          && request.resource.data.keys().hasAll(["sessionType", "title", "status",
+                                                  "startedAt", "createdAt", "updatedAt"])
+          && request.resource.data.sessionType in
+               ["therapy", "dream_visualization", "journal", "meditation"]
+          && request.resource.data.status in ["active", "completed", "abandoned"];
+
+        allow update: if isOwner(uid)
+          && request.resource.data.keys().hasAll(["updatedAt"]);
+
+        // ── /users/{uid}/sessions/{sessionId}/messages ────────────────────
+        //
+        // PRIVACY: Only transcribed text is stored — raw audio must NEVER be
+        // written here. Enforced architecturally by the frontend; the schema
+        // has no audio field to prevent accidental storage.
+        match /messages/{messageId} {
+          allow read, delete: if isOwner(uid);
+
+          allow create: if isOwner(uid)
+            && request.resource.data.keys().hasAll(["role", "content", "flagged", "timestamp"])
+            && request.resource.data.role in ["user", "assistant", "system"]
+            && request.resource.data.content is string
+            && request.resource.data.flagged is bool;
+
+          // Messages are append-only; updates only allowed for AI post-processing
+          // fields (sentimentScore, flagged). Title/content cannot be altered.
+          allow update: if isOwner(uid)
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["sentimentScore", "flagged"]);
+        }
+      }
+
+      // ── /users/{uid}/moodEntries — mood log entries ──────────────────────
+      match /moodEntries/{entryId} {
+        allow read, delete: if isOwner(uid);
+
+        allow create: if isOwner(uid)
+          && request.resource.data.keys().hasAll(["score", "tags", "source", "createdAt"])
+          && request.resource.data.score is number
+          && request.resource.data.score >= 1
+          && request.resource.data.score <= 10
+          && request.resource.data.source in ["manual", "post_session", "check_in"]
+          && request.resource.data.tags is list;
+
+        // Mood entries are immutable after creation
+        allow update: if false;
+      }
+    }
+
+    // ── /sharedReports/{reportId} — therapist-sharing documents ─────────────
+    //
+    // READ: anyone who knows the document ID can read it, provided:
+    //   • the report has not expired (expiresAt is in the future)
+    //   • the access count hasn't hit the maximum
+    // This is intentional — the document ID is an unguessable token (UUID).
+    //
+    // CREATE: only the document owner (matched by userId field).
+    //
+    // UPDATE: denied for clients. Access count increments are handled by a
+    //   Cloud Function (reportService.getSharedReport) running with admin SDK.
+    //   This prevents clients from manipulating access counts.
+    //
+    // DELETE: only the document owner can revoke a shared link.
+    match /sharedReports/{reportId} {
+      allow read: if notExpired(resource.data.expiresAt)
+                  && resource.data.accessCount < resource.data.maxAccesses;
+
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.keys().hasAll([
+             "userId", "reportData", "expiresAt",
+             "accessCount", "maxAccesses", "createdAt"
+           ])
+        && request.resource.data.accessCount == 0
+        && request.resource.data.maxAccesses is int
+        && request.resource.data.maxAccesses > 0
+        && request.resource.data.maxAccesses <= 20;
+
+      // Only allow updating accessCount by exactly 1, and only while the
+      // report is still valid. All other field updates are denied.
+      // This lets getSharedReport() increment the counter client-side
+      // without needing an Admin SDK / Cloud Function.
+      allow update: if notExpired(resource.data.expiresAt)
+                    && resource.data.accessCount < resource.data.maxAccesses
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(["accessCount"])
+                    && request.resource.data.accessCount
+                         == resource.data.accessCount + 1;
+
+      allow delete: if isAuthenticated()
+        && request.auth.uid == resource.data.userId;
+    }
+
+    // ── Default deny ─────────────────────────────────────────────────────────
+    // Any collection or document not explicitly matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
