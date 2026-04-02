@@ -1,6 +1,6 @@
-# Adaptive Wellness Companion — Backend Infrastructure
+# Adaptive Wellness Companion
 
-This repo contains the full data layer and auth system for the Adaptive Wellness Companion mental health app. Built with **React**, **Firebase (Firestore + Auth)**, and **TypeScript**.
+A full-stack mental health app built with **React**, **Firebase (Firestore + Auth)**, and **TypeScript**. The repository includes a complete data layer, auth system, and a navigable UI app shell with routing and a responsive layout.
 
 ---
 
@@ -31,13 +31,21 @@ REACT_APP_FIREBASE_APP_ID=...
 
 > Never commit `.env.local` — it is already in `.gitignore`.
 
-### 3. Deploy Firestore security rules
+### 3. Start the development server
+
+```bash
+npm start
+```
+
+The app will open at [http://localhost:3000](http://localhost:3000). Unauthenticated visitors are redirected to `/login` automatically.
+
+### 4. Deploy Firestore security rules
 
 ```bash
 firebase deploy --only firestore:rules
 ```
 
-### 4. (Optional) Seed test data
+### 5. (Optional) Seed test data
 
 ```bash
 npm run seed        # populate test user + 14 days of mood/session data
@@ -50,31 +58,96 @@ npm run clear-seed  # wipe all seeded data
 
 ```
 src/
+├── App.tsx                        # Root component — router + auth provider
+├── index.tsx                      # React entry point
 ├── firebase/
-│   └── config.ts              # Firebase app, Auth, Firestore initialization
+│   └── config.ts                  # Firebase app, Auth, Firestore initialization
 ├── contexts/
-│   └── AuthContext.tsx         # Global auth state + signup/login/logout
+│   └── AuthContext.tsx            # Global auth state + signup/login/logout
 ├── components/
-│   └── auth/
-│       ├── Login.jsx           # Login form
-│       ├── SignUp.jsx          # Signup form with email verification
-│       ├── ForgotPassword.jsx  # Password reset form
-│       ├── ProtectedRoute.jsx  # Redirects unauthenticated users
-│       └── authErrors.ts       # Maps Firebase error codes to friendly messages
+│   ├── auth/
+│   │   ├── Login.jsx              # Login form
+│   │   ├── SignUp.jsx             # Signup form with email verification
+│   │   ├── ForgotPassword.jsx     # Password reset form
+│   │   ├── ProtectedRoute.jsx     # Redirects unauthenticated users
+│   │   └── authErrors.ts         # Maps Firebase error codes to friendly messages
+│   ├── layout/
+│   │   └── AppLayout.tsx          # Sidebar (desktop) + bottom tabs (mobile) shell
+│   └── common/
+│       ├── LoadingSpinner.tsx     # Reusable loading indicator
+│       ├── ErrorMessage.tsx       # Reusable error display
+│       └── EmptyState.tsx         # Reusable empty-state with optional CTA
+├── pages/
+│   ├── Dashboard.tsx              # Home screen — mood chart, recent sessions, quick actions
+│   ├── SessionHistory.tsx         # List of all past sessions
+│   ├── SessionDetail.tsx          # Individual session view
+│   ├── MoodTracker.tsx            # Log and view mood entries
+│   ├── Settings.tsx               # User settings and report sharing
+│   ├── SharedReportView.tsx       # Public therapist report (no auth required)
+│   └── NotFound.tsx               # 404 page
 ├── services/
-│   ├── userService.ts          # User profile CRUD
-│   ├── sessionService.ts       # Sessions + messages CRUD + AI context
-│   ├── moodService.ts          # Mood entry logging + trend calculation
-│   ├── reportService.ts        # Shareable therapist report generation
-│   └── privacyService.ts       # Account deletion (GDPR)
-├── types/
-│   └── index.ts               # All shared TypeScript interfaces
+│   ├── userService.ts             # User profile CRUD
+│   ├── sessionService.ts          # Sessions + messages CRUD + AI context
+│   ├── moodService.ts             # Mood entry logging + trend calculation
+│   ├── reportService.ts           # Shareable therapist report generation
+│   └── privacyService.ts          # Account deletion (GDPR)
+├── styles/
+│   ├── global.css                 # CSS custom properties and base styles
+│   └── layout.css                 # AppLayout sidebar / topbar / bottom-tab styles
+└── types/
+    └── index.ts                   # All shared TypeScript interfaces
 scripts/
-├── seedData.ts                 # Populate dev database with test data
-└── clearTestData.ts            # Wipe all seeded test data
-firestore.rules                 # Firestore security rules
-.env.example                    # Template for environment variables
+├── seedData.ts                    # Populate dev database with test data
+└── clearTestData.ts               # Wipe all seeded test data
+firestore.rules                    # Firestore security rules
+.env.example                       # Template for environment variables
 ```
+
+---
+
+## App Shell & Routing
+
+The app uses **React Router v6** with a single `<BrowserRouter>` wrapping the entire tree in `index.tsx`.
+
+### Route map
+
+| Path | Component | Auth required? | Notes |
+|---|---|---|---|
+| `/` | `RootRedirect` | — | Sends logged-in users to `/dashboard`, others to `/login` |
+| `/login` | `Login` | No | |
+| `/signup` | `SignUp` | No | |
+| `/forgot-password` | `ForgotPassword` | No | |
+| `/shared-report/:reportId` | `SharedReportView` | No | Public therapist report |
+| `/dashboard` | `Dashboard` | ✅ | Mood chart, recent sessions, quick actions |
+| `/sessions` | `SessionHistory` | ✅ | Full session list |
+| `/sessions/:sessionId` | `SessionDetail` | ✅ | Individual session |
+| `/mood` | `MoodTracker` | ✅ | Log and view mood entries |
+| `/settings` | `Settings` | ✅ | User settings + report sharing |
+| `*` | `NotFound` | — | 404 fallback |
+
+### AppLayout
+
+All authenticated routes are wrapped in `<AppLayout>`, which provides:
+
+- **Desktop sidebar** — app brand + `NavLink`-based navigation for Dashboard, Sessions, Mood, and Settings.
+- **Desktop top bar** — displays the current user's display name (or email) and a log-out button.
+- **Mobile top bar** — compact header with a log-out button.
+- **Mobile bottom tab bar** — icon + label navigation tabs, mirroring the sidebar links.
+
+```tsx
+import AppLayout from './components/layout/AppLayout';
+
+// Already wired in App.tsx — wrap any new protected page the same way:
+<Route path="/new-page" element={<ProtectedRoute><AppLayout><NewPage /></AppLayout></ProtectedRoute>} />
+```
+
+### Common UI components
+
+| Component | Purpose |
+|---|---|
+| `LoadingSpinner` | Full-page or inline loading indicator |
+| `ErrorMessage` | Displays a human-readable error string |
+| `EmptyState` | Empty list / zero-data state with an optional action button |
 
 ---
 
@@ -228,7 +301,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 
 Unauthenticated users are redirected to `/login` and sent back to their original destination after signing in.
 
-**Auth pages are already built** — just add these routes in your router:
+**All auth routes are already wired in `App.tsx`** — no additional router setup needed:
 
 | Path | Component |
 |---|---|
@@ -348,5 +421,6 @@ This deletes: all messages, all sessions, all mood entries, all shared reports, 
 | Database | Firestore (NoSQL) |
 | Language | TypeScript 5 |
 | Routing | React Router v6 |
+| Styling | CSS custom properties (`global.css` + `layout.css`) |
 | Hosting | Vercel |
 | Package manager | npm |
