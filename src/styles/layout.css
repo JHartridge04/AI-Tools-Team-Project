@@ -1,0 +1,219 @@
+/* === App Layout === */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* === Sidebar (Desktop) === */
+.sidebar {
+  width: 240px;
+  background: var(--card-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.sidebar-brand {
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-brand h2 {
+  font-size: 1rem;
+  color: var(--primary);
+  line-height: 1.4;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 0.75rem 0;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  background: var(--bg);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-link.active {
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+
+.nav-icon {
+  font-size: 1.2rem;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* === Top Bar === */
+.topbar {
+  height: 60px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 240px;
+  z-index: 99;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.topbar-name {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.topbar-logout {
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  transition: background 0.15s, color 0.15s;
+}
+
+.topbar-logout:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* === Main Content === */
+.main-content {
+  flex: 1;
+  margin-left: 240px;
+  margin-top: 60px;
+  padding: 1.5rem;
+  min-height: calc(100vh - 60px);
+}
+
+/* === Bottom Tab Bar (Mobile) === */
+.bottom-tabs {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  z-index: 100;
+}
+
+.bottom-tabs-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 100%;
+}
+
+.tab-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 0.25rem 0.75rem;
+  transition: color 0.15s;
+}
+
+.tab-link:hover {
+  text-decoration: none;
+}
+
+.tab-link.active {
+  color: var(--primary);
+}
+
+.tab-icon {
+  font-size: 1.3rem;
+}
+
+/* === Mobile Topbar === */
+.mobile-topbar {
+  display: none;
+  height: 56px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+}
+
+.mobile-topbar-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.mobile-topbar-logout {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .topbar {
+    display: none;
+  }
+
+  .mobile-topbar {
+    display: flex;
+  }
+
+  .bottom-tabs {
+    display: block;
+  }
+
+  .main-content {
+    margin-left: 0;
+    margin-top: 56px;
+    margin-bottom: 60px;
+    padding: 1rem;
+  }
+}
