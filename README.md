@@ -1,4 +1,4 @@
-# Adaptive Wellness Companion Hi
+# Adaptive Wellness Companion
 
 A full-stack mental health app built with **React**, **Firebase (Firestore + Auth)**, and **TypeScript**. The repository includes a complete data layer, auth system, and a navigable UI app shell with routing and a responsive layout.
 
