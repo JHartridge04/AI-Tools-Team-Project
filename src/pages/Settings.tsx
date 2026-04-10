@@ -86,10 +86,7 @@ const Settings: React.FC = () => {
     const start = new Date();
     start.setDate(start.getDate() - 30);
 
-    const result = await generateShareableReport(uid, {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
-    });
+    const result = await generateShareableReport(uid, { start, end });
 
     if (result.success) {
       const reportId = result.data;
