@@ -9,13 +9,15 @@ import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
 /**
  * Wraps a route so only authenticated users can access it.
  * Preserves the intended destination so the user is redirected back after login.
- *
- * @param {React.ReactNode} children - The protected page component.
  */
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { currentUser } = useAuth();
   const location = useLocation();
 

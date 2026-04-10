@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getSharedReport } from '../services/reportService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
-import { SharedReport } from '../types';
+import { SharedReport, WithId } from '../types';
 
 const sessionTypeLabels: Record<string, string> = {
   therapy: 'Therapy',
@@ -14,7 +14,7 @@ const sessionTypeLabels: Record<string, string> = {
 
 const SharedReportView: React.FC = () => {
   const { reportId } = useParams<{ reportId: string }>();
-  const [report, setReport] = useState<SharedReport | null>(null);
+  const [report, setReport] = useState<WithId<SharedReport> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -59,7 +59,7 @@ const SharedReportView: React.FC = () => {
 
   if (!report) return null;
 
-  const { reportData } = report;
+  const { reportData } = report.data;
   const moodColor = (val: number) => {
     const hue = (val / 10) * 120;
     return `hsl(${hue}, 60%, 55%)`;
