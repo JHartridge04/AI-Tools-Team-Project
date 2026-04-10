@@ -18,7 +18,7 @@ const SessionDetail: React.FC = () => {
   const { currentUser } = useAuth();
   const uid = currentUser?.uid;
 
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<WithId<Session> | null>(null);
   const [messages, setMessages] = useState<WithId<Message>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -96,25 +96,25 @@ const SessionDetail: React.FC = () => {
       <div className="card" style={{ marginBottom: '1rem', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
           <span style={{ fontSize: '1.5rem' }}>
-            {sessionTypeIcons[session.sessionType] || '📄'}
+            {sessionTypeIcons[session.data.sessionType] || '📄'}
           </span>
           <div>
-            <h2 style={{ margin: 0 }}>{session.title || 'Untitled Session'}</h2>
+            <h2 style={{ margin: 0 }}>{session.data.title || 'Untitled Session'}</h2>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              {session.sessionType.replace('_', ' ')} &middot;{' '}
-              {session.startedAt?.toDate?.()
-                ? session.startedAt.toDate().toLocaleString()
+              {session.data.sessionType.replace('_', ' ')} &middot;{' '}
+              {session.data.startedAt?.toDate?.()
+                ? session.data.startedAt.toDate().toLocaleString()
                 : 'Unknown date'}
               &middot;{' '}
-              <span className={`badge badge-${session.status}`}>{session.status}</span>
+              <span className={`badge badge-${session.data.status}`}>{session.data.status}</span>
             </div>
           </div>
         </div>
-        {(session.moodBefore != null || session.moodAfter != null) && (
+        {(session.data.moodBefore != null || session.data.moodAfter != null) && (
           <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            {session.moodBefore != null && <>Mood before: <strong>{session.moodBefore}/10</strong></>}
-            {session.moodBefore != null && session.moodAfter != null && ' → '}
-            {session.moodAfter != null && <>Mood after: <strong>{session.moodAfter}/10</strong></>}
+            {session.data.moodBefore != null && <>Mood before: <strong>{session.data.moodBefore}/10</strong></>}
+            {session.data.moodBefore != null && session.data.moodAfter != null && ' → '}
+            {session.data.moodAfter != null && <>Mood after: <strong>{session.data.moodAfter}/10</strong></>}
           </div>
         )}
       </div>
@@ -143,7 +143,7 @@ const SessionDetail: React.FC = () => {
       </div>
 
       {/* Input Area (active sessions only) */}
-      {session.status === 'active' && (
+      {session.data.status === 'active' && (
         <div style={{
           flexShrink: 0,
           padding: '0.75rem',
@@ -173,7 +173,7 @@ const SessionDetail: React.FC = () => {
       )}
 
       {/* Summary (completed sessions) */}
-      {session.status === 'completed' && session.summary && (
+      {session.data.status === 'completed' && session.data.summary && (
         <div style={{
           flexShrink: 0,
           padding: '1rem',
@@ -183,7 +183,7 @@ const SessionDetail: React.FC = () => {
           marginTop: '0.75rem',
         }}>
           <h4 style={{ marginBottom: '0.4rem', color: 'var(--primary)' }}>Session Summary</h4>
-          <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>{session.summary}</p>
+          <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>{session.data.summary}</p>
         </div>
       )}
     </div>
