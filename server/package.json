@@ -1,0 +1,15 @@
+{
+  "name": "adaptive-wellness-companion-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend proxy for the Adaptive Wellness Companion — keeps the Anthropic API key secret.",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0"
+  }
+}
