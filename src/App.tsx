@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import SharedReportView from './pages/SharedReportView';
 import NotFound from './pages/NotFound';
 import DreamVisualization from './pages/DreamVisualization';
+import SessionRouter from './pages/SessionRouter';
 
 const RootRedirect: React.FC = () => {
   const { currentUser, loading } = useAuth();
@@ -41,6 +42,7 @@ const App: React.FC = () => {
         <Route path="/sessions/:sessionId" element={<ProtectedRoute><AppLayout><SessionDetail /></AppLayout></ProtectedRoute>} />
         <Route path="/mood" element={<ProtectedRoute><AppLayout><MoodTracker /></AppLayout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
+        <Route path="/session/:sessionId" element={<ProtectedRoute><AppLayout><SessionRouter /></AppLayout></ProtectedRoute>} />
         <Route path="/dream/:sessionId" element={<ProtectedRoute><AppLayout><DreamVisualization /></AppLayout></ProtectedRoute>} />
 
         {/* 404 */}

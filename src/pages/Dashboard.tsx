@@ -166,7 +166,7 @@ const Dashboard: React.FC = () => {
             {sessions.map((s) => (
               <div
                 key={s.id}
-                onClick={() => navigate(`/sessions/${s.id}`)}
+                onClick={() => navigate(`/session/${s.id}`)}
                 className="card"
                 style={{
                   cursor: 'pointer',

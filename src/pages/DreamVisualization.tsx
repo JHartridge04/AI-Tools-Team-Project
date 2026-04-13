@@ -42,9 +42,7 @@ IMPORTANT RULES:
  * ============================================================================
  *  CLAUDE API CALL — Sends messages to the AI and gets a visualization response.
  *
- *  Tries the backend proxy first (keeps the API key server-side and secure).
- *  Falls back to a direct browser call if the proxy is unavailable
- *  (only works if REACT_APP_ANTHROPIC_API_KEY is set in .env.local — dev only).
+ *  All requests go through the backend proxy, which holds the API key securely.
  *
  *  TEAMMATES: The proxy runs at http://localhost:3001. Start it with:
  *    cd server && npm install && npm start
@@ -62,44 +60,18 @@ async function callVisualizationAI(
     max_tokens: 1024,
   };
 
-  // --- Attempt 1: Backend proxy (recommended for production) ---
-  try {
-    const proxyRes = await fetch(`${API_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (proxyRes.ok) {
-      const data = await proxyRes.json();
-      return data.content?.[0]?.text || 'Close your eyes and take a deep breath. Your journey begins now...';
-    }
-  } catch {
-    // Proxy not running — fall through to direct API call
-  }
-
-  // --- Attempt 2: Direct Anthropic API call (dev fallback only) ---
-  const apiKey = process.env.REACT_APP_ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return 'The visualization guide is currently unavailable. Please make sure the backend proxy is running (cd server && npm start) or set REACT_APP_ANTHROPIC_API_KEY in your .env.local file.';
-  }
-
-  const directRes = await fetch('https://api.anthropic.com/v1/messages', {
+  const proxyRes = await fetch(`${API_URL}/api/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
-  if (!directRes.ok) {
-    const err = await directRes.json().catch(() => ({}));
-    throw new Error((err as any).error?.message || 'Anthropic API request failed');
+  if (!proxyRes.ok) {
+    const err = await proxyRes.json().catch(() => ({}));
+    throw new Error((err as any).error?.message || 'Visualization guide unavailable.');
   }
 
-  const data = await directRes.json();
+  const data = await proxyRes.json();
   return data.content?.[0]?.text || 'Close your eyes and take a deep breath. Your journey begins now...';
 }
 
@@ -204,7 +176,12 @@ const DreamVisualization: React.FC = () => {
     }
 
     // Step 4: Save the AI's visualization to Firestore
-    await addMessage(uid, sessionId, 'assistant', aiResponse);
+    const aiMsgResult = await addMessage(uid, sessionId, 'assistant', aiResponse);
+    if (!aiMsgResult.success) {
+      setError('Your visualization was generated but could not be saved. Please try again.');
+      setSending(false);
+      return;
+    }
 
     // Refresh to show the AI response
     const finalRefresh = await getSessionMessages(uid, sessionId);
@@ -368,6 +345,7 @@ const DreamVisualization: React.FC = () => {
             onKeyDown={handleKeyDown}
             placeholder="Describe your dream, goal, or a peaceful place you want to visualize..."
             rows={2}
+            maxLength={2000}
             style={{ resize: 'none', flex: 1 }}
             disabled={sending || endingSession}
           />
