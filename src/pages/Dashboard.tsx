@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserProfile } from '../services/userService';
 import { getMoodTrend } from '../services/moodService';
-import { getUserSessions } from '../services/sessionService';
+import { getUserSessions, createSession } from '../services/sessionService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import EmptyState from '../components/common/EmptyState';
@@ -39,6 +39,8 @@ const Dashboard: React.FC = () => {
   const [sessions, setSessions] = useState<WithId<Session>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Prevents double-clicks when creating a new therapy session
+  const [creatingSession, setCreatingSession] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -66,6 +68,26 @@ const Dashboard: React.FC = () => {
 
     fetchData();
   }, [uid]);
+
+  /**
+   * Creates a new therapy session in Firestore and navigates to it.
+   * This kicks off the AI therapist chat — see SessionDetail.tsx for the
+   * full AI integration (system prompt, Claude API call, crisis detection).
+   */
+  const handleNewTherapySession = async () => {
+    if (!uid || creatingSession) return;
+    setCreatingSession(true);
+
+    const result = await createSession(uid, 'therapy');
+
+    if (result.success) {
+      // Navigate to the new session — SessionDetail.tsx handles the rest
+      navigate(`/sessions/${result.data}`);
+    } else {
+      setError('Failed to create session. Please try again.');
+      setCreatingSession(false);
+    }
+  };
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorMessage error={error} />;
@@ -171,12 +193,13 @@ const Dashboard: React.FC = () => {
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: '0.75rem',
         }}>
-          {/* TODO: Sydney — Replace this placeholder with AI therapist session launcher */}
+          {/* Starts a new AI therapy session and navigates to the chat */}
           <QuickAction
             icon="🧠"
             label="New Therapy Session"
-            subtitle="(Coming Soon)"
-            disabled
+            subtitle={creatingSession ? 'Starting...' : undefined}
+            disabled={creatingSession}
+            onClick={handleNewTherapySession}
           />
           {/* TODO: Alexa — Replace this placeholder with dream visualization component */}
           <QuickAction
