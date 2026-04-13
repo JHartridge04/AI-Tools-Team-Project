@@ -51,11 +51,12 @@ IMPORTANT RULES:
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 async function callVisualizationAI(
-  conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }>
+  conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
+  systemPromptOverride?: string
 ): Promise<string> {
   const body = {
     model: 'claude-sonnet-4-6',
-    system: DREAM_SYSTEM_PROMPT,
+    system: systemPromptOverride ?? DREAM_SYSTEM_PROMPT,
     messages: conversationMessages,
     max_tokens: 1024,
   };
@@ -204,17 +205,23 @@ const DreamVisualization: React.FC = () => {
       .filter((m) => m.data.role === 'user' || m.data.role === 'assistant')
       .map((m) => ({ role: m.data.role as 'user' | 'assistant', content: m.data.content }));
 
-    // Ask the AI to summarize the visualization session
+    // Ask the AI to summarize the visualization session.
+    // A dedicated system prompt replaces DREAM_SYSTEM_PROMPT so the model writes
+    // a plain archival summary rather than another immersive visualization.
+    const SUMMARY_SYSTEM_PROMPT =
+      'You are a concise session summarizer. Write exactly 2 sentences in third person ' +
+      '(e.g. "The user visualized..."). Do not use second-person address, grounding phrases, ' +
+      'or embellishment. Describe only what the user explored and the overall mood or theme.';
+
     let summary = 'Dream visualization session completed.';
     try {
-      summary = await callVisualizationAI([
-        ...convoForSummary,
-        {
-          role: 'user',
-          content:
-            'Please write a 2-sentence summary of this dream visualization session. Describe what the user explored and the overall mood or theme. Write in third person (e.g., "The user visualized...").',
-        },
-      ]);
+      summary = await callVisualizationAI(
+        [
+          ...convoForSummary,
+          { role: 'user', content: 'Summarize this dream visualization session.' },
+        ],
+        SUMMARY_SYSTEM_PROMPT
+      );
     } catch {
       summary = 'Dream visualization session ended. (Summary generation failed.)';
     }

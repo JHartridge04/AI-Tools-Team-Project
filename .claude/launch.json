@@ -11,6 +11,7 @@
       "name": "Backend Proxy (Claude API)",
       "runtimeExecutable": "node",
       "runtimeArgs": ["server/index.js"],
+      "cwd": "${workspaceFolder}/server",
       "port": 3001
     }
   ]
