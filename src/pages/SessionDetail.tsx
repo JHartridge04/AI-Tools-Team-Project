@@ -108,7 +108,7 @@ async function callTherapistAI(
   }
 
   const body = {
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     system: finalSystem,
     messages: conversationMessages,
     max_tokens: 1024,

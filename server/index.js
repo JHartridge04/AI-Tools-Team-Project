@@ -32,6 +32,7 @@
 
 const express = require("express");
 const cors = require("cors");
+const Anthropic = require("@anthropic-ai/sdk").default;
 
 // Load environment variables from server/.env
 require("dotenv").config();
@@ -64,7 +65,7 @@ app.get("/api/health", (_req, res) => {
  *
  * Expects a JSON body with the same shape the Anthropic Messages API accepts:
  *   {
- *     model: "claude-sonnet-4-20250514",
+ *     model: "claude-sonnet-4-6",
  *     system: "You are a therapist...",
  *     messages: [{ role: "user", content: "Hello" }, ...],
  *     max_tokens: 1024
@@ -83,37 +84,23 @@ app.post("/api/chat", async (req, res) => {
   }
 
   try {
-    // Forward the request to Anthropic's Messages API
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: req.body.model || "claude-sonnet-4-20250514",
-        system: req.body.system || "",
-        messages: req.body.messages || [],
-        max_tokens: req.body.max_tokens || 1024,
-      }),
+    const client = new Anthropic({ apiKey });
+
+    const message = await client.messages.create({
+      model: req.body.model || "claude-sonnet-4-6",
+      system: req.body.system || "",
+      messages: req.body.messages || [],
+      max_tokens: req.body.max_tokens || 1024,
     });
 
-    // Parse the Anthropic response
-    const data = await response.json();
-
-    // If Anthropic returned an error, pass it through with the right status
-    if (!response.ok) {
-      console.error("Anthropic API error:", data);
-      return res.status(response.status).json(data);
-    }
-
     // Success — send the full response back to the frontend
-    return res.json(data);
+    return res.json(message);
   } catch (err) {
     console.error("Proxy error:", err);
-    return res.status(500).json({
-      error: "Failed to reach the Anthropic API. Check your network and API key.",
+    // Surface Anthropic API errors with the original status code when available
+    const status = err.status || 500;
+    return res.status(status).json({
+      error: err.message || "Failed to reach the Anthropic API. Check your network and API key.",
     });
   }
 });
