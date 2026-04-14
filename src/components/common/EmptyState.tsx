@@ -4,9 +4,10 @@ interface EmptyStateProps {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionDisabled?: boolean;
 }
 
-const EmptyState: React.FC<EmptyStateProps> = ({ message, actionLabel, onAction }) => {
+const EmptyState: React.FC<EmptyStateProps> = ({ message, actionLabel, onAction, actionDisabled }) => {
   return (
     <div style={{
       display: 'flex',
@@ -26,6 +27,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ message, actionLabel, onAction 
         <button
           className="btn btn-primary"
           onClick={onAction}
+          disabled={actionDisabled}
         >
           {actionLabel}
         </button>

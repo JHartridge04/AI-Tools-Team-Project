@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserSessions } from '../services/sessionService';
+import { getUserSessions, createSession } from '../services/sessionService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import EmptyState from '../components/common/EmptyState';
@@ -31,6 +31,8 @@ const SessionHistory: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<SessionType | 'all'>('all');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   useEffect(() => {
     if (!uid) return;
@@ -56,6 +58,35 @@ const SessionHistory: React.FC = () => {
   const filtered = filter === 'all'
     ? sessions
     : sessions.filter((s) => s.data.sessionType === filter);
+
+  /**
+   * Creates a new session matching the active filter tab and navigates to it.
+   * all/therapy  → therapy session  → /sessions/:id
+   * dream_visualization → dream_visualization → /dream/:id
+   * journal      → journal session  → /sessions/:id  (uses chat UI)
+   * meditation   → meditation session → /dream/:id   (uses visualization UI)
+   */
+  const handleNewSession = async () => {
+    if (!uid || creating) return;
+    setCreating(true);
+    setCreateError('');
+
+    const sessionType: SessionType =
+      filter === 'dream_visualization' ? 'dream_visualization'
+      : filter === 'journal'           ? 'journal'
+      : filter === 'meditation'        ? 'meditation'
+      : 'therapy';
+
+    const usesVizPage = sessionType === 'dream_visualization' || sessionType === 'meditation';
+
+    const result = await createSession(uid, sessionType);
+    if (result.success) {
+      navigate(usesVizPage ? `/dream/${result.data}` : `/sessions/${result.data}`);
+    } else {
+      setCreateError(result.error);
+      setCreating(false);
+    }
+  };
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
@@ -97,7 +128,13 @@ const SessionHistory: React.FC = () => {
       ) : error ? (
         <ErrorMessage error={error} />
       ) : filtered.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <>
+          {createError && (
+            <p style={{ color: 'var(--danger)', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+              {createError}
+            </p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {filtered.map((s) => (
             <div
               key={s.id}
@@ -136,17 +173,26 @@ const SessionHistory: React.FC = () => {
               </span>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       ) : (
-        <EmptyState
-          message={
-            filter === 'all'
-              ? 'No sessions yet. Start your first one!'
-              : `No ${filter.replace('_', ' ')} sessions found.`
-          }
-          actionLabel="New Session"
-          onAction={() => navigate('/sessions')}
-        />
+        <>
+          {createError && (
+            <p style={{ color: 'var(--danger)', fontSize: '0.9rem', marginBottom: '0.75rem', textAlign: 'center' }}>
+              {createError}
+            </p>
+          )}
+          <EmptyState
+            message={
+              filter === 'all'
+                ? 'No sessions yet. Start your first one!'
+                : `No ${filter.replace('_', ' ')} sessions found.`
+            }
+            actionLabel={creating ? 'Starting...' : 'New Session'}
+            onAction={handleNewSession}
+            actionDisabled={creating}
+          />
+        </>
       )}
     </div>
   );

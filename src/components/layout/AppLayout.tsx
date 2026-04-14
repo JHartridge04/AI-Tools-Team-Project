@@ -11,6 +11,7 @@ const navItems = [
   { to: '/dashboard', icon: '🏠', label: 'Dashboard' },
   { to: '/sessions', icon: '💬', label: 'Sessions' },
   { to: '/mood', icon: '💜', label: 'Mood' },
+  { to: '/cultural-mirror', icon: '◈', label: 'Cultural Mirror' },
   { to: '/settings', icon: '⚙️', label: 'Settings' },
 ];
 
@@ -21,7 +22,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login');
+      navigate('/');
     } catch {
       // Logout failed silently — user stays on page
     }

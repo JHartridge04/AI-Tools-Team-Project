@@ -202,8 +202,9 @@ const Dashboard: React.FC = () => {
         ) : (
           <EmptyState
             message="No sessions yet. Start your wellness journey!"
-            actionLabel="New Session"
-            onAction={() => navigate('/sessions')}
+            actionLabel={creatingSession ? 'Starting...' : 'New Session'}
+            onAction={handleNewTherapySession}
+            actionDisabled={creatingSession}
           />
         )}
       </div>

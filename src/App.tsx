@@ -15,20 +15,27 @@ import SharedReportView from './pages/SharedReportView';
 import NotFound from './pages/NotFound';
 import DreamVisualization from './pages/DreamVisualization';
 import SessionRouter from './pages/SessionRouter';
+import CulturalMirror from './pages/CulturalMirror';
+import Home from './pages/Home';
 
-const RootRedirect: React.FC = () => {
+/**
+ * Renders at /. Logged-in users go straight to /dashboard;
+ * logged-out users see the public landing page.
+ */
+const RootRoute: React.FC = () => {
   const { currentUser, loading } = useAuth();
 
   if (loading) return null;
-  return currentUser ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+  if (currentUser) return <Navigate to="/dashboard" replace />;
+  return <Home />;
 };
 
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <Routes>
-        {/* Root redirect */}
-        <Route path="/" element={<RootRedirect />} />
+        {/* Root — Home page for logged-out, dashboard redirect for logged-in */}
+        <Route path="/" element={<RootRoute />} />
 
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
@@ -44,6 +51,7 @@ const App: React.FC = () => {
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
         <Route path="/session/:sessionId" element={<ProtectedRoute><AppLayout><SessionRouter /></AppLayout></ProtectedRoute>} />
         <Route path="/dream/:sessionId" element={<ProtectedRoute><AppLayout><DreamVisualization /></AppLayout></ProtectedRoute>} />
+        <Route path="/cultural-mirror" element={<ProtectedRoute><AppLayout><CulturalMirror /></AppLayout></ProtectedRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
