@@ -105,15 +105,128 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// ─── Cultural Mirror endpoint ─────────────────────────────────────────────────
+
+/**
+ * POST /api/cultural-mirror
+ *
+ * Audits a piece of text for implicit bias and returns a structured JSON report.
+ *
+ * Request body:
+ *   {
+ *     text:    string,                                  // text to audit
+ *     type:    "image_prompt" | "therapist_response",  // audit mode
+ *     context: string (optional)                        // extra user context
+ *   }
+ *
+ * Response — BiasAudit object:
+ *   {
+ *     biasDetected: boolean,
+ *     confidence:   "high" | "medium" | "low",
+ *     biasTypes:    string[],
+ *     explanation:  string,
+ *     originalText: string,
+ *     revisedText:  string
+ *   }
+ */
+app.post("/api/cultural-mirror", async (req, res) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error("ANTHROPIC_API_KEY is not set in server/.env");
+    return res.status(500).json({
+      error: "Server misconfigured — ANTHROPIC_API_KEY is missing.",
+    });
+  }
+
+  const { text, type, context } = req.body;
+  if (!text || typeof text !== "string") {
+    return res.status(400).json({ error: "Missing required field: text (string)." });
+  }
+
+  const modeLabel =
+    type === "therapist_response"
+      ? "an AI therapist response"
+      : "an image generation prompt";
+
+  const contextClause =
+    context && typeof context === "string" && context.trim()
+      ? `\n\nAdditional user context: ${context.trim()}`
+      : "";
+
+  const systemPrompt = `You are the Cultural Mirror, a bias-detection specialist. Your job is to audit ${modeLabel} for implicit bias — including racial, gender, age, cultural, religious, and socioeconomic assumptions or stereotypes.
+
+When you receive a text, respond ONLY with a valid JSON object matching this exact shape (no markdown, no code fences, no extra keys):
+{
+  "biasDetected": boolean,
+  "confidence": "high" | "medium" | "low",
+  "biasTypes": string[],
+  "explanation": string,
+  "originalText": string,
+  "revisedText": string
+}
+
+Rules:
+- "biasDetected" is true only if you have clear evidence of bias.
+- "confidence" reflects how certain you are of your assessment.
+- "biasTypes" lists short category labels (e.g. "gender", "racial", "cultural", "religious", "age", "socioeconomic"). Empty array when no bias found.
+- "explanation" explains the bias in 1-2 sentences. Empty string when no bias found.
+- "originalText" is the input text, copied verbatim.
+- "revisedText" is an inclusive rewrite preserving original intent. Equal to "originalText" when no bias is found.
+- Be precise — do not flag text that is merely specific or that names a cultural group in a neutral, accurate way.`;
+
+  try {
+    const client = new Anthropic({ apiKey });
+
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: `Please audit the following text for bias:${contextClause}\n\n"${text}"`,
+        },
+      ],
+      max_tokens: 1024,
+    });
+
+    // Extract the text content from Claude's response
+    const rawContent =
+      message.content && message.content[0] && message.content[0].type === "text"
+        ? message.content[0].text
+        : "";
+
+    // Parse the JSON Claude returned — strip accidental code fences if present
+    const cleaned = rawContent.replace(/```(?:json)?/gi, "").trim();
+    let audit;
+    try {
+      audit = JSON.parse(cleaned);
+    } catch {
+      console.error("Cultural mirror: failed to parse Claude JSON:", rawContent);
+      return res.status(500).json({
+        error: "Cultural mirror returned malformed JSON. Please try again.",
+      });
+    }
+
+    return res.json(audit);
+  } catch (err) {
+    console.error("Cultural mirror proxy error:", err);
+    const status = err.status || 500;
+    return res.status(status).json({
+      error: err.message || "Failed to reach the Anthropic API.",
+    });
+  }
+});
+
 // ─── Start server ────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   console.log(`✓ Proxy server running on http://localhost:${PORT}`);
-  console.log(`  POST /api/chat   → forwards to Anthropic Messages API`);
-  console.log(`  GET  /api/health → health check`);
+  console.log(`  POST /api/chat            → forwards to Anthropic Messages API`);
+  console.log(`  POST /api/cultural-mirror → bias audit via Claude`);
+  console.log(`  GET  /api/health          → health check`);
   console.log();
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn("⚠ WARNING: ANTHROPIC_API_KEY is not set in server/.env");
-    console.warn("  The /api/chat endpoint will return 500 until you set it.");
+    console.warn("  The /api/chat and /api/cultural-mirror endpoints will return 500 until you set it.");
   }
 });

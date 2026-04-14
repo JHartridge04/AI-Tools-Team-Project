@@ -1,0 +1,431 @@
+/* culturalMirror.css
+   Styles for the Cultural Mirror page.
+   Uses the same CSS custom property tokens as global.css so it inherits
+   whatever theme the rest of the app sets. Add this file to src/styles/.
+*/
+
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+
+.cm-page {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  color: var(--color-text, #1a1a2e);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.cm-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 2px solid var(--color-border, #e8e4f0);
+}
+
+.cm-header-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  color: var(--color-primary, #6c63ff);
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.cm-title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.35rem;
+  color: var(--color-text, #1a1a2e);
+}
+
+.cm-subtitle {
+  font-size: 0.95rem;
+  color: var(--color-text-muted, #6b7280);
+  margin: 0;
+  font-style: italic;
+  font-family: 'Georgia', serif;
+}
+
+/* ── How it works ───────────────────────────────────────────────────────── */
+
+.cm-how-it-works {
+  background: var(--color-surface, #f5f3ff);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.cm-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary, #6c63ff);
+  margin: 0 0 1rem;
+  font-family: 'Georgia', serif;
+}
+
+.cm-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.cm-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.cm-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary, #6c63ff);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-family: 'Georgia', serif;
+}
+
+.cm-step p {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #4b5563);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+
+.cm-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 2px solid var(--color-border, #e8e4f0);
+  padding-bottom: 0;
+}
+
+.cm-tab-btn {
+  padding: 0.65rem 1.25rem;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  font-family: 'Georgia', serif;
+  color: var(--color-text-muted, #6b7280);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.cm-tab-btn:hover {
+  color: var(--color-primary, #6c63ff);
+}
+
+.cm-tab-btn--active {
+  color: var(--color-primary, #6c63ff);
+  border-bottom-color: var(--color-primary, #6c63ff);
+  font-weight: 600;
+}
+
+/* ── Tab content ────────────────────────────────────────────────────────── */
+
+.cm-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cm-tab-description {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #4b5563);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Examples ───────────────────────────────────────────────────────────── */
+
+.cm-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cm-examples-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #9ca3af);
+  font-family: 'Georgia', serif;
+}
+
+.cm-example-btn {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--color-border, #d1c9f0);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.8rem;
+  font-family: 'Georgia', serif;
+  color: var(--color-primary, #6c63ff);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-align: left;
+}
+
+.cm-example-btn:hover {
+  background: var(--color-primary, #6c63ff);
+  color: #fff;
+  border-color: var(--color-primary, #6c63ff);
+}
+
+/* ── Form inputs ────────────────────────────────────────────────────────── */
+
+.cm-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cm-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text, #1a1a2e);
+  letter-spacing: 0.02em;
+  font-family: 'Georgia', serif;
+}
+
+.cm-label-optional {
+  font-weight: 400;
+  color: var(--color-text-muted, #9ca3af);
+  font-style: italic;
+}
+
+.cm-input,
+.cm-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--color-border, #d1c9f0);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: 'Georgia', serif;
+  color: var(--color-text, #1a1a2e);
+  background: #fff;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.cm-input:focus,
+.cm-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary, #6c63ff);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.12);
+}
+
+/* ── Run button ─────────────────────────────────────────────────────────── */
+
+.cm-btn {
+  align-self: flex-start;
+  padding: 0.75rem 2rem;
+  background: var(--color-primary, #6c63ff);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: 'Georgia', serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.cm-btn:hover:not(:disabled) {
+  background: #5751e0;
+  transform: translateY(-1px);
+}
+
+.cm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cm-btn-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* ── Spinner ────────────────────────────────────────────────────────────── */
+
+.cm-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cm-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes cm-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Error ──────────────────────────────────────────────────────────────── */
+
+.cm-error {
+  color: #dc2626;
+  font-size: 0.88rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0;
+}
+
+/* ── Audit result card ──────────────────────────────────────────────────── */
+
+.cm-result {
+  border-radius: 12px;
+  border: 1.5px solid;
+  padding: 1.5rem;
+  animation: cm-fadein 0.3s ease;
+}
+
+@keyframes cm-fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cm-result--clean {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.cm-result--flagged {
+  border-color: #fca5a5;
+  background: #fff7f7;
+}
+
+.cm-result-header {
+  margin-bottom: 1rem;
+}
+
+.cm-result-status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cm-status-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.cm-status-icon--ok   { color: #16a34a; }
+.cm-status-icon--warn { color: #dc2626; }
+
+/* ── Confidence pill ────────────────────────────────────────────────────── */
+
+.cm-confidence {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-family: 'Georgia', serif;
+}
+
+.cm-confidence--high   { background: #dcfce7; color: #15803d; }
+.cm-confidence--medium { background: #fef9c3; color: #a16207; }
+.cm-confidence--low    { background: #fee2e2; color: #b91c1c; }
+
+/* ── Bias type tags ─────────────────────────────────────────────────────── */
+
+.cm-bias-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.cm-bias-tag {
+  font-size: 0.78rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  background: #fecaca;
+  color: #991b1b;
+  font-family: 'Georgia', serif;
+  font-weight: 500;
+}
+
+/* ── Explanation ────────────────────────────────────────────────────────── */
+
+.cm-explanation {
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #4b5563);
+  line-height: 1.6;
+  margin: 0 0 1.25rem;
+  font-style: italic;
+}
+
+/* ── Before / after comparison ──────────────────────────────────────────── */
+
+.cm-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .cm-comparison { grid-template-columns: 1fr; }
+  .cm-steps { grid-template-columns: 1fr 1fr; }
+}
+
+.cm-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cm-text-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #9ca3af);
+  font-family: 'Georgia', serif;
+}
+
+.cm-text-content {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin: 0;
+  font-family: 'Georgia', serif;
+}
+
+.cm-text-content--original {
+  background: #f3f4f6;
+  color: #6b7280;
+  text-decoration: line-through;
+  text-decoration-color: #fca5a5;
+}
+
+.cm-text-content--revised {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}

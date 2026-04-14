@@ -15,6 +15,7 @@ import SharedReportView from './pages/SharedReportView';
 import NotFound from './pages/NotFound';
 import DreamVisualization from './pages/DreamVisualization';
 import SessionRouter from './pages/SessionRouter';
+import CulturalMirror from './pages/CulturalMirror';
 
 const RootRedirect: React.FC = () => {
   const { currentUser, loading } = useAuth();
@@ -44,6 +45,7 @@ const App: React.FC = () => {
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
         <Route path="/session/:sessionId" element={<ProtectedRoute><AppLayout><SessionRouter /></AppLayout></ProtectedRoute>} />
         <Route path="/dream/:sessionId" element={<ProtectedRoute><AppLayout><DreamVisualization /></AppLayout></ProtectedRoute>} />
+        <Route path="/cultural-mirror" element={<ProtectedRoute><AppLayout><CulturalMirror /></AppLayout></ProtectedRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<NotFound />} />

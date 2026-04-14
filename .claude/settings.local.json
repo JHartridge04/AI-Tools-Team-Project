@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(cp \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\CulturalMirror.tsx\" \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\src\\\\pages\\\\CulturalMirror.tsx\")",
+      "Bash(cp \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\culturalMirror.css\" \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\src\\\\styles\\\\culturalMirror.css\")",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
