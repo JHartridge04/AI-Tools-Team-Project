@@ -42,12 +42,15 @@ const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
-// Allow requests from the React dev server (http://localhost:3000)
-app.use(
-  cors({
-    origin: process.env.ALLOWED_ORIGIN || "http://localhost:3000",
-  })
-);
+// Parse ALLOWED_ORIGINS as a comma-separated list so multiple origins can be
+// permitted without code changes — e.g. for local dev + a deployed Vercel URL.
+// Falls back to http://localhost:3000 if the variable isn't set.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(cors({ origin: allowedOrigins }));
 
 // Parse JSON request bodies (Claude API messages can be large)
 app.use(express.json({ limit: "1mb" }));
