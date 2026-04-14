@@ -1,3 +1,15 @@
+/* ============================================================
+   Adaptive Wellness Companion — global.css
+   Redesigned by India
+   
+   Design direction: Warm organic, nature-inspired, editorial
+   Palette: Forest greens (#435B4D, #506F57), sage (#84AF78, #A9CD9E),
+            blue-gray (#84A3A6, #526B65), warm neutrals (#FAFAF8, #D9D8D5)
+   Fonts: Cormorant Garamond (headings) + Jost (body)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap');
+
 /* === CSS Reset === */
 *,
 *::before,
@@ -13,8 +25,8 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Jost', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
   color: var(--text);
   background: var(--bg);
   line-height: 1.6;
@@ -58,156 +70,259 @@ ol {
 
 /* === CSS Variables === */
 :root {
-  --primary: #6c63ff;
-  --primary-light: #a5a0ff;
-  --primary-bg: #eeedff;
-  --bg: #f0f4f8;
-  --card-bg: #ffffff;
-  --text: #2d3748;
-  --text-muted: #718096;
-  --success: #38a169;
-  --success-bg: #f0fff4;
-  --warning: #d69e2e;
-  --warning-bg: #fffff0;
-  --danger: #e53e3e;
-  --danger-bg: #fff5f5;
-  --border: #e2e8f0;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  --radius: 12px;
+  /* Brand greens */
+  --primary:          #435B4D;
+  --primary-mid:      #506F57;
+  --primary-light:    #6F866C;
+  --primary-sage:     #84AF78;
+  --primary-pale:     #A9CD9E;
+  --primary-bg:       #EEF4EE;
+  --primary-deep:     #1C342C;
+
+  /* Blue-gray accents */
+  --accent-blue:      #84A3A6;
+  --accent-teal:      #526B65;
+
+  /* Warm neutrals */
+  --bg:               #FAFAF8;
+  --bg-warm:          #FFFFFF;
+  --card-bg:          #FFFFFF;
+
+  /* Text */
+  --text:             #2A2420;
+  --text-muted:       #896A58;
+  --text-faint:       #ACAB9E;
+
+  /* Borders */
+  --border:           #D9D8D5;
+  --border-light:     #E5E4E0;
+
+  /* Semantic */
+  --success:          #435B4D;
+  --success-bg:       #EEF4EE;
+  --warning:          #896A58;
+  --warning-bg:       #FAF3EC;
+  --danger:           #8B3A3A;
+  --danger-bg:        #FDF0F0;
+
+  /* Shadows & radius */
+  --shadow:           0 2px 16px rgba(67, 91, 77, 0.08);
+  --shadow-sm:        0 1px 6px rgba(67, 91, 77, 0.06);
+  --radius:           12px;
+  --radius-sm:        8px;
+  --radius-pill:      999px;
 }
 
 /* === Typography === */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 300;
   line-height: 1.3;
-  font-weight: 600;
   color: var(--text);
+  letter-spacing: 0.02em;
 }
 
-h1 { font-size: 1.75rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.25rem; }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.3rem; }
 h4 { font-size: 1.1rem; }
 
-/* === Utility Classes === */
+/* Small uppercase label — use for card titles, section labels */
+.label {
+  font-family: 'Jost', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* === Cards === */
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 1.5rem;
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem 1.5rem;
 }
 
+/* Accent left border variant */
+.card-accent {
+  border-left: 3px solid var(--primary);
+}
+
+/* Dark filled card (used for greeting/hero) */
+.card-dark {
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius);
+  padding: 1.5rem 1.75rem;
+}
+
+.card-dark h1,
+.card-dark h2,
+.card-dark h3 {
+  color: #ffffff;
+}
+
+/* === Buttons === */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 0.95rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0;
   transition: background 0.2s, opacity 0.2s, transform 0.1s;
-}
-
-.btn:hover {
-  opacity: 0.9;
+  cursor: pointer;
 }
 
 .btn:active {
   transform: scale(0.98);
 }
 
+/* Primary — filled forest green */
 .btn-primary {
   background: var(--primary);
-  color: #fff;
+  color: #ffffff;
+  border: none;
 }
 
 .btn-primary:hover {
-  background: #5a52e0;
+  background: var(--primary-mid);
 }
 
+/* Secondary — outline forest green */
 .btn-secondary {
-  background: var(--primary-bg);
+  background: transparent;
   color: var(--primary);
+  border: 0.5px solid var(--primary);
 }
 
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
+.btn-secondary:hover {
+  background: var(--primary-bg);
 }
 
-.btn-danger:hover {
-  background: #c53030;
-}
-
+/* Muted — light border, for less prominent actions */
 .btn-outline {
   background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--text-muted);
+  border: 0.5px solid var(--border);
 }
 
 .btn-outline:hover {
   background: var(--bg);
+  border-color: var(--text-faint);
 }
 
-.btn-disabled {
-  opacity: 0.5;
+/* Danger */
+.btn-danger {
+  background: var(--danger);
+  color: #ffffff;
+  border: none;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
+}
+
+/* Disabled state */
+.btn-disabled,
+.btn:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
-}
-
-.btn-disabled:hover {
-  opacity: 0.5;
-  transform: none;
+  pointer-events: none;
 }
 
 /* === Form Elements === */
 .input {
   width: 100%;
-  padding: 0.625rem 0.875rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 0.6rem 0.875rem;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
   background: var(--card-bg);
-  transition: border-color 0.2s;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.95rem;
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+  border-color: var(--primary-sage);
+  box-shadow: 0 0 0 3px rgba(132, 175, 120, 0.15);
 }
 
-/* === Badge === */
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+/* === Badges === */
 .badge {
   display: inline-block;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.65rem;
+  border-radius: 0;
 }
 
 .badge-active {
-  background: var(--success-bg);
-  color: var(--success);
+  background: var(--primary-bg);
+  color: var(--primary);
+  border: 0.5px solid var(--primary-sage);
 }
 
 .badge-completed {
-  background: var(--bg);
-  color: var(--text-muted);
+  background: var(--primary-bg);
+  color: var(--primary);
+  border: 0.5px solid var(--primary-sage);
 }
 
 .badge-abandoned {
   background: var(--danger-bg);
   color: var(--danger);
+  border: 0.5px solid var(--danger);
+}
+
+/* === Error & Success Messages === */
+.message-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--danger);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.message-success {
+  background: var(--success-bg);
+  color: var(--success);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--primary-sage);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* === Dividers === */
+hr {
+  border: none;
+  border-top: 0.5px solid var(--border-light);
+  margin: 1.25rem 0;
 }
 
 /* === Scrollbar === */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -220,5 +335,49 @@ h4 { font-size: 1.1rem; }
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: var(--text-faint);
 }
+
+/* === Auth page wrapper (Login, SignUp, ForgotPassword) === */
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 2rem 1rem;
+}
+
+.auth-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 0.5px solid var(--border);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow);
+}
+
+.auth-card h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.4rem;
+  color: var(--primary-deep);
+}
+
+.auth-card .auth-subtext {
+  font-size: 0.875rem;
+  color: var(--text-faint);
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.04em;
+}
+
+/* === Utility === */
+.text-muted  { color: var(--text-muted); }
+.text-faint  { color: var(--text-faint); }
+.text-center { text-align: center; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
