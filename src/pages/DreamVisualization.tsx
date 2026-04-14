@@ -99,6 +99,10 @@ const DreamVisualization: React.FC = () => {
   const [sending, setSending] = useState(false);
   // "End Session" loading state — prevents double-clicks
   const [endingSession, setEndingSession] = useState(false);
+  // Maps each assistant message ID to its Pollinations.ai image URL.
+  // Pollinations is free and requires no API key — the browser loads
+  // the image directly from the URL when it's set as an <img> src.
+  const [imageMap, setImageMap] = useState<Record<string, string>>({});
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -187,6 +191,13 @@ const DreamVisualization: React.FC = () => {
     // Refresh to show the AI response
     const finalRefresh = await getSessionMessages(uid, sessionId);
     if (finalRefresh.success) setMessages(finalRefresh.data);
+
+    // Step 5: Generate a free image using Pollinations.ai.
+    // We build a URL from the user's prompt — no API key or cost required.
+    // The browser loads the image lazily in the background via the <img> tag.
+    const imagePrompt = `serene dreamlike visualization: ${text}, soft watercolor, warm peaceful meditation art`;
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=1024&height=1024&nologo=true`;
+    setImageMap((prev) => ({ ...prev, [aiMsgResult.data]: imageUrl }));
 
     setSending(false);
   };
@@ -309,9 +320,13 @@ const DreamVisualization: React.FC = () => {
           </div>
         )}
 
-        {/* Render each message */}
+        {/* Render each message — assistant messages get a free Pollinations image if available */}
         {messages.map((msg) => (
-          <VisualizationMessage key={msg.id} message={msg.data} />
+          <VisualizationMessage
+            key={msg.id}
+            message={msg.data}
+            imageUrl={msg.data.role === 'assistant' ? imageMap[msg.id] : undefined}
+          />
         ))}
 
         {/* "Visualizing..." indicator while the AI is generating */}
@@ -408,7 +423,7 @@ const DreamVisualization: React.FC = () => {
  *  - Assistant messages: left-aligned, soft card style — the visualization itself
  * ============================================================================
  */
-const VisualizationMessage: React.FC<{ message: Message }> = ({ message }) => {
+const VisualizationMessage: React.FC<{ message: Message; imageUrl?: string }> = ({ message, imageUrl }) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
@@ -474,6 +489,25 @@ const VisualizationMessage: React.FC<{ message: Message }> = ({ message }) => {
         <p style={{ fontSize: '0.95rem', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>
           {message.content}
         </p>
+        {/* Pollinations.ai image — free, no API key needed.
+            The browser fetches and displays it automatically once the URL is set.
+            It takes ~10-15 seconds to generate — the browser shows a loading state. */}
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt="AI-generated dream visualization"
+            style={{
+              width: '100%',
+              borderRadius: 8,
+              marginTop: '0.75rem',
+              display: 'block',
+            }}
+            onError={(e) => {
+              // Hide the image quietly if Pollinations is unavailable
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        )}
         <div style={{ fontSize: '0.7rem', marginTop: '0.5rem', opacity: 0.6, textAlign: 'right' }}>
           {message.timestamp?.toDate?.()
             ? message.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
