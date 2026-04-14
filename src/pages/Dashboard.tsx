@@ -41,6 +41,8 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState('');
   // Prevents double-clicks when creating a new therapy session
   const [creatingSession, setCreatingSession] = useState(false);
+  // Prevents double-clicks when creating a new dream visualization session
+  const [creatingDream, setCreatingDream] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -68,6 +70,27 @@ const Dashboard: React.FC = () => {
 
     fetchData();
   }, [uid]);
+
+  /**
+   * Creates a new dream_visualization session in Firestore and navigates to it.
+   * The DreamVisualization page handles all AI interaction from that point.
+   * TODO: Alexa — this is your handler. Customize the title or add a mood-before
+   * prompt here if you want to collect a pre-session mood score.
+   */
+  const handleNewDreamSession = async () => {
+    if (!uid || creatingDream) return;
+    setCreatingDream(true);
+
+    const result = await createSession(uid, 'dream_visualization');
+
+    if (result.success) {
+      // Navigate to the new dream visualization session
+      navigate(`/dream/${result.data}`);
+    } else {
+      setError('Failed to start dream visualization. Please try again.');
+      setCreatingDream(false);
+    }
+  };
 
   /**
    * Creates a new therapy session in Firestore and navigates to it.
@@ -143,7 +166,7 @@ const Dashboard: React.FC = () => {
             {sessions.map((s) => (
               <div
                 key={s.id}
-                onClick={() => navigate(`/sessions/${s.id}`)}
+                onClick={() => navigate(`/session/${s.id}`)}
                 className="card"
                 style={{
                   cursor: 'pointer',
@@ -201,12 +224,13 @@ const Dashboard: React.FC = () => {
             disabled={creatingSession}
             onClick={handleNewTherapySession}
           />
-          {/* TODO: Alexa — Replace this placeholder with dream visualization component */}
+          {/* Alexa — Dream Visualization launcher. Creates a session and opens the viz page. */}
           <QuickAction
             icon="🌙"
             label="Dream Visualization"
-            subtitle="(Coming Soon)"
-            disabled
+            subtitle={creatingDream ? 'Starting...' : undefined}
+            disabled={creatingDream}
+            onClick={handleNewDreamSession}
           />
           <QuickAction
             icon="💜"
