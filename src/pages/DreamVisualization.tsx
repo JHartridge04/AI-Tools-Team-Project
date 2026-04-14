@@ -7,6 +7,8 @@ import {
   addMessage,
   endSession,
 } from '../services/sessionService';
+import { checkImagePrompt } from '../services/culturalMirrorService';
+import { generateDreamImage } from '../services/imageService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { Session, Message, WithId } from '../types';
@@ -24,19 +26,25 @@ import { Session, Message, WithId } from '../types';
  */
 const DREAM_SYSTEM_PROMPT = `You are a gentle, imaginative guided visualization companion in a wellness app called "Adaptive Wellness Companion." Your role is to help users explore dreams, goals, and peaceful mental spaces through rich, sensory storytelling.
 
+IMPORTANT CONTEXT — HOW THIS EXPERIENCE WORKS:
+The app generates a DALL-E 3 image in parallel with your text response. By the time the user reads your words, a visual scene is displayed above them. Write your text as a narration of that scene — as though you are guiding the user through a painting they are actively looking at. Use phrases like "The scene before you…", "In the image you see…", "As you gaze across this landscape…", or "Notice the light in the distance." This creates a seamless experience where your words and the image feel like one unified vision. Never mention DALL-E, AI image generation, or any technical detail — just refer to "the scene", "the image", or "what you see before you."
+
 When the user describes a dream, a goal, or a place they want to visualize:
 1. Create an immersive guided visualization — weave in colors, textures, sounds, smells, and feelings.
 2. Write in second person ("You feel...", "You see...") to draw the user into the experience.
-3. Keep the tone warm, calm, and encouraging. Aim for 3–4 short paragraphs.
-4. End each response with a gentle grounding phrase that leaves the user feeling refreshed and motivated.
-5. If the user wants to refine or continue the visualization, build naturally on what came before.
+3. Narrate the generated scene as though the user is looking at it right now. Ground at least one detail per paragraph in something visible ("the soft amber glow", "the still water at your feet").
+4. Keep the tone warm, calm, and encouraging. Aim for 3–4 short paragraphs.
+5. End each response with a gentle grounding phrase that leaves the user feeling refreshed and motivated.
+6. If the user wants to refine or continue the visualization, build naturally on what came before.
 
 IMPORTANT RULES:
-1. NEVER diagnose or interpret dreams clinically.
-2. NEVER prescribe or recommend medications.
-3. If the user describes recurring nightmares or deeply distressing content, gently acknowledge their feelings and suggest speaking with a licensed mental health professional.
-4. You are a wellness companion — not a replacement for real therapy. Make that clear if it ever feels relevant.
-5. Keep responses focused and peaceful. This is a safe, calm space.`;
+1. NEVER say you cannot generate, display, or show images. An image IS being shown to the user.
+2. NEVER describe yourself as "text-only" or "text-based." You are a full visualization experience.
+3. NEVER diagnose or interpret dreams clinically.
+4. NEVER prescribe or recommend medications.
+5. If the user describes recurring nightmares or deeply distressing content, gently acknowledge their feelings and suggest speaking with a licensed mental health professional.
+6. You are a wellness companion — not a replacement for real therapy. Make that clear if it ever feels relevant.
+7. Keep responses focused and peaceful. This is a safe, calm space.`;
 
 /*
  * ============================================================================
@@ -85,6 +93,17 @@ async function callVisualizationAI(
  *  are supported so users can refine or continue their journey.
  * ============================================================================
  */
+/**
+ * Per-message image state for DALL-E generated images.
+ *   'loading' → generation in progress (show shimmer)
+ *   object    → generation succeeded (show image + caption)
+ *   'error'   → generation failed (show friendly message)
+ */
+type ImageState =
+  | 'loading'
+  | { url: string; revisedPrompt: string }
+  | 'error';
+
 const DreamVisualization: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { currentUser } = useAuth();
@@ -99,10 +118,12 @@ const DreamVisualization: React.FC = () => {
   const [sending, setSending] = useState(false);
   // "End Session" loading state — prevents double-clicks
   const [endingSession, setEndingSession] = useState(false);
-  // Maps each assistant message ID to its Pollinations.ai image URL.
-  // Pollinations is free and requires no API key — the browser loads
-  // the image directly from the URL when it's set as an <img> src.
-  const [imageMap, setImageMap] = useState<Record<string, string>>({});
+  // Maps each assistant message ID to its DALL-E image state.
+  // Key absent   → no image for this message yet
+  // 'loading'    → Cultural Mirror + DALL-E running in background
+  // { url, ... } → image ready to display
+  // 'error'      → generation failed; show friendly fallback text
+  const [imageMap, setImageMap] = useState<Record<string, ImageState>>({});
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -171,13 +192,27 @@ const DreamVisualization: React.FC = () => {
       .filter((m) => m.data.role === 'user' || m.data.role === 'assistant')
       .map((m) => ({ role: m.data.role as 'user' | 'assistant', content: m.data.content }));
 
-    // Step 3: Call the Claude API for a guided visualization
-    let aiResponse: string;
-    try {
-      aiResponse = await callVisualizationAI(conversationForAI);
-    } catch {
-      aiResponse =
-        "I'm having trouble connecting right now. Please try again in a moment. Take a deep breath — your journey is waiting.";
+    // Step 3: Run Claude text generation AND Cultural Mirror bias check in parallel.
+    // Text generation drives the UX — Cultural Mirror result only feeds the image prompt.
+    const [aiSettled, mirrorSettled] = await Promise.allSettled([
+      callVisualizationAI(conversationForAI),
+      checkImagePrompt(text),
+    ]);
+
+    const aiResponse: string =
+      aiSettled.status === 'fulfilled'
+        ? aiSettled.value
+        : "I'm having trouble connecting right now. Please try again in a moment. Take a deep breath — your journey is waiting.";
+
+    // Determine the image prompt: use the Cultural Mirror's inclusive revision when bias
+    // was detected, otherwise fall back to the user's original description.
+    let promptForImage = text;
+    if (
+      mirrorSettled.status === 'fulfilled' &&
+      mirrorSettled.value.success &&
+      mirrorSettled.value.data.biasDetected
+    ) {
+      promptForImage = mirrorSettled.value.data.revisedText;
     }
 
     // Step 4: Save the AI's visualization to Firestore
@@ -188,18 +223,30 @@ const DreamVisualization: React.FC = () => {
       return;
     }
 
-    // Refresh to show the AI response
+    // Refresh to show the AI response — text is now visible
     const finalRefresh = await getSessionMessages(uid, sessionId);
     if (finalRefresh.success) setMessages(finalRefresh.data);
 
-    // Step 5: Generate a free image using Pollinations.ai.
-    // We build a URL from the user's prompt — no API key or cost required.
-    // The browser loads the image lazily in the background via the <img> tag.
-    const imagePrompt = `serene dreamlike visualization: ${text}, soft watercolor, warm peaceful meditation art`;
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=1024&height=1024&nologo=true`;
-    setImageMap((prev) => ({ ...prev, [aiMsgResult.data]: imageUrl }));
-
+    // Step 5: Kick off DALL-E 3 image generation in the background.
+    // We mark the message as 'loading' now so the shimmer appears immediately,
+    // then update to the image URL (or 'error') when generation finishes.
+    // setSending(false) is called here so the input re-enables while the image loads.
+    const msgId = aiMsgResult.data;
+    setImageMap((prev) => ({ ...prev, [msgId]: 'loading' }));
     setSending(false);
+
+    generateDreamImage(
+      `serene dreamlike visualization: ${promptForImage}, soft watercolor, warm peaceful meditation art`
+    ).then((imgResult) => {
+      if (imgResult.success) {
+        setImageMap((prev) => ({
+          ...prev,
+          [msgId]: { url: imgResult.data.imageUrl, revisedPrompt: imgResult.data.revisedPrompt },
+        }));
+      } else {
+        setImageMap((prev) => ({ ...prev, [msgId]: 'error' }));
+      }
+    });
   };
 
   /*
@@ -320,12 +367,12 @@ const DreamVisualization: React.FC = () => {
           </div>
         )}
 
-        {/* Render each message — assistant messages get a free Pollinations image if available */}
+        {/* Render each message — assistant messages show a DALL-E image when ready */}
         {messages.map((msg) => (
           <VisualizationMessage
             key={msg.id}
             message={msg.data}
-            imageUrl={msg.data.role === 'assistant' ? imageMap[msg.id] : undefined}
+            imageState={msg.data.role === 'assistant' ? imageMap[msg.id] : undefined}
           />
         ))}
 
@@ -420,10 +467,13 @@ const DreamVisualization: React.FC = () => {
  *  VISUALIZATION MESSAGE — Renders a single exchange in the session.
  *
  *  - User messages: right-aligned, pill style — the "prompt" they gave
- *  - Assistant messages: left-aligned, soft card style — the visualization itself
+ *  - Assistant messages: left-aligned, soft card — visualization text + DALL-E image
  * ============================================================================
  */
-const VisualizationMessage: React.FC<{ message: Message; imageUrl?: string }> = ({ message, imageUrl }) => {
+const VisualizationMessage: React.FC<{
+  message: Message;
+  imageState?: ImageState;
+}> = ({ message, imageState }) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
@@ -470,6 +520,13 @@ const VisualizationMessage: React.FC<{ message: Message; imageUrl?: string }> = 
     );
   }
 
+  // Resolve image state into renderable pieces
+  const imageIsLoading = imageState === 'loading';
+  const imageIsError = imageState === 'error';
+  const imageData = imageState && imageState !== 'loading' && imageState !== 'error'
+    ? imageState
+    : null;
+
   // Assistant message — left-aligned, larger card for the rich visualization text
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
@@ -486,28 +543,46 @@ const VisualizationMessage: React.FC<{ message: Message; imageUrl?: string }> = 
         <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, marginBottom: '0.5rem' }}>
           🌙 Your Visualization
         </div>
-        <p style={{ fontSize: '0.95rem', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>
-          {message.content}
-        </p>
-        {/* Pollinations.ai image — free, no API key needed.
-            The browser fetches and displays it automatically once the URL is set.
-            It takes ~10-15 seconds to generate — the browser shows a loading state. */}
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt="AI-generated dream visualization"
-            style={{
-              width: '100%',
-              borderRadius: 8,
-              marginTop: '0.75rem',
-              display: 'block',
-            }}
-            onError={(e) => {
-              // Hide the image quietly if Pollinations is unavailable
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
-        )}
+
+        {/* Image column (shimmer / actual image / error) and text column */}
+        <div className="dv-visual-layout">
+          {/* Image area — only rendered when there is an image state for this message */}
+          {imageState !== undefined && (
+            <div className="dv-image-col">
+              {imageIsLoading && (
+                <>
+                  <div className="dv-image-skeleton" aria-label="Generating your image…" />
+                  <p className="dv-image-skeleton-label">✨ Painting your scene with DALL-E…</p>
+                </>
+              )}
+              {imageData && (
+                <>
+                  <img
+                    src={imageData.url}
+                    alt="AI-generated dream visualization"
+                    className="dv-image"
+                  />
+                  <p className="dv-image-caption">
+                    Image generated from: <em>{imageData.revisedPrompt}</em>
+                  </p>
+                </>
+              )}
+              {imageIsError && (
+                <p className="dv-image-error">
+                  We couldn't generate an image right now, but your visualization is ready below.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Visualization text */}
+          <div className="dv-text-col">
+            <p style={{ fontSize: '0.95rem', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>
+              {message.content}
+            </p>
+          </div>
+        </div>
+
         <div style={{ fontSize: '0.7rem', marginTop: '0.5rem', opacity: 0.6, textAlign: 'right' }}>
           {message.timestamp?.toDate?.()
             ? message.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

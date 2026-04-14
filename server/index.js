@@ -105,6 +105,139 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// ─── DALL-E 3 image generation endpoint ──────────────────────────────────────
+
+/**
+ * POST /api/generate-image
+ *
+ * Generates an image via OpenAI's DALL-E 3 API, downloads the bytes from the
+ * Azure CDN URL that DALL-E returns, and proxies them back to the client as a
+ * base64 data URL.  This avoids DNS/network issues where the client cannot
+ * resolve oaidalleapiprodscus.blob.core.windows.net directly.
+ * The OPENAI_API_KEY never leaves the server.
+ *
+ * Request body:  { prompt: string }  — 1-1000 characters
+ * Response:      { imageUrl: "data:image/png;base64,...", revisedPrompt: string }
+ */
+app.post("/api/generate-image", async (req, res) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.error("OPENAI_API_KEY is not set in server/.env");
+    return res.status(500).json({
+      error: "Image generation is not configured — OPENAI_API_KEY is missing.",
+    });
+  }
+
+  const { prompt } = req.body;
+  if (!prompt || typeof prompt !== "string") {
+    return res.status(400).json({ error: "Missing required field: prompt (string)." });
+  }
+  if (prompt.trim().length === 0) {
+    return res.status(400).json({ error: "Prompt must not be empty." });
+  }
+  if (prompt.length > 1000) {
+    return res.status(400).json({ error: "Prompt must be 1-1000 characters." });
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: prompt.trim(),
+        n: 1,
+        size: "1792x1024",
+        quality: "standard",
+      }),
+    });
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      const message = errBody?.error?.message || `OpenAI error ${response.status}`;
+      console.error("DALL-E error:", message);
+
+      if (response.status === 429) {
+        return res.status(429).json({
+          error: "Image generation is temporarily unavailable due to rate limits. Please try again in a moment.",
+        });
+      }
+      if (response.status === 400) {
+        return res.status(400).json({
+          error: "The image prompt was rejected. Try rephrasing your description.",
+        });
+      }
+      return res.status(500).json({
+        error: "Image generation failed. Your visualization text is still available below.",
+      });
+    }
+
+    const data = await response.json();
+    const imageResult = data.data?.[0];
+    if (!imageResult?.url) {
+      return res.status(500).json({ error: "No image was returned. Please try again." });
+    }
+
+    // Download the image bytes from the Azure CDN URL.
+    // The frontend may not be able to resolve the Azure hostname directly, so
+    // the server proxies the bytes and returns them as a base64 data URL instead.
+    const downloadController = new AbortController();
+    const downloadTimeout = setTimeout(() => downloadController.abort(), 30_000);
+
+    let imageDataUrl;
+    try {
+      const imgResponse = await fetch(imageResult.url, { signal: downloadController.signal });
+      clearTimeout(downloadTimeout);
+
+      if (!imgResponse.ok) {
+        console.error("Image download failed:", imgResponse.status);
+        return res.status(502).json({
+          error: "Image was generated but could not be downloaded. Please try again.",
+        });
+      }
+
+      const contentType = imgResponse.headers.get("content-type") || "image/png";
+      const buffer = await imgResponse.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString("base64");
+
+      // Reject unexpectedly large payloads before they hit the client
+      const MAX_BASE64_BYTES = 10 * 1024 * 1024; // 10 MB
+      if (base64.length > MAX_BASE64_BYTES) {
+        console.error("Generated image exceeded 10 MB base64 limit:", base64.length);
+        return res.status(502).json({
+          error: "The generated image was too large to deliver. Please try again.",
+        });
+      }
+
+      imageDataUrl = `data:${contentType};base64,${base64}`;
+    } catch (dlErr) {
+      clearTimeout(downloadTimeout);
+      if (dlErr.name === "AbortError") {
+        return res.status(504).json({
+          error: "Image download timed out. Please try again.",
+        });
+      }
+      console.error("Image download error:", dlErr);
+      return res.status(502).json({
+        error: "Image was generated but could not be delivered. Please try again.",
+      });
+    }
+
+    return res.json({
+      imageUrl: imageDataUrl,
+      revisedPrompt: imageResult.revised_prompt || prompt,
+    });
+  } catch (err) {
+    console.error("Image generation proxy error:", err);
+    return res.status(500).json({
+      error: "Could not reach the image generation service. Your visualization text is still available.",
+    });
+  }
+});
+
 // ─── Cultural Mirror endpoint ─────────────────────────────────────────────────
 
 /**
@@ -222,6 +355,7 @@ Rules:
 app.listen(PORT, () => {
   console.log(`✓ Proxy server running on http://localhost:${PORT}`);
   console.log(`  POST /api/chat            → forwards to Anthropic Messages API`);
+  console.log(`  POST /api/generate-image  → DALL-E 3 image generation via OpenAI`);
   console.log(`  POST /api/cultural-mirror → bias audit via Claude`);
   console.log(`  GET  /api/health          → health check`);
   console.log();
