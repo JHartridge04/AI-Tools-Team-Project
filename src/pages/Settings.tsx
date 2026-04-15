@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getUserProfile, updateUserProfile } from '../services/userService';
 import { generateShareableReport } from '../services/reportService';
 import { deleteAllUserData } from '../services/privacyService';
@@ -98,17 +99,37 @@ const Settings: React.FC = () => {
     setGeneratingReport(false);
   };
 
+  const [reAuthPassword, setReAuthPassword] = useState('');
+  const [showReAuth, setShowReAuth] = useState(false);
+
   const handleDeleteAccount = async () => {
     if (!uid || !currentUser) return;
     setDeleting(true);
     setDeleteError('');
 
+    // Re-authenticate first — Firebase requires recent login for account deletion
+    if (currentUser.email && reAuthPassword) {
+      try {
+        const credential = EmailAuthProvider.credential(currentUser.email, reAuthPassword);
+        await reauthenticateWithCredential(currentUser, credential);
+      } catch {
+        setDeleteError('Incorrect password. Please try again.');
+        setDeleting(false);
+        return;
+      }
+    }
+
     const result = await deleteAllUserData(uid);
     if (result.success) {
       try {
         await currentUser.delete();
-      } catch {
-        // If delete fails (re-auth needed), still logout
+      } catch (err: any) {
+        if (err.code === 'auth/requires-recent-login') {
+          setDeleteError('');
+          setShowReAuth(true);
+          setDeleting(false);
+          return;
+        }
       }
       await logout();
       navigate('/login');
@@ -267,6 +288,22 @@ const Settings: React.FC = () => {
               This will permanently delete all your data including sessions, messages, mood logs, and reports. This action cannot be undone.
             </p>
 
+            {(showReAuth || true) && (
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem', fontWeight: 500 }}>
+                  Enter your password to confirm
+                </label>
+                <input
+                  type="password"
+                  className="input"
+                  value={reAuthPassword}
+                  onChange={(e) => setReAuthPassword(e.target.value)}
+                  placeholder="Your current password"
+                  disabled={deleting}
+                />
+              </div>
+            )}
+
             {deleteError && (
               <div style={{ marginBottom: '0.75rem' }}>
                 <ErrorMessage error={deleteError} />
@@ -276,7 +313,7 @@ const Settings: React.FC = () => {
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button
                 className="btn btn-outline"
-                onClick={() => setShowDeleteModal(false)}
+                onClick={() => { setShowDeleteModal(false); setShowReAuth(false); setReAuthPassword(''); setDeleteError(''); }}
                 disabled={deleting}
               >
                 Cancel
@@ -284,7 +321,7 @@ const Settings: React.FC = () => {
               <button
                 className="btn btn-danger"
                 onClick={handleDeleteAccount}
-                disabled={deleting}
+                disabled={deleting || !reAuthPassword}
               >
                 {deleting ? 'Deleting...' : 'Yes, Delete Everything'}
               </button>

@@ -55,7 +55,7 @@ export async function addMoodEntry(
     }
     const entry: MoodEntry = {
       score,
-      note: note ?? undefined,
+      ...(note ? { note } : {}),
       tags: tags ?? [],
       source: source ?? "manual",
       relatedSessionId: relatedSessionId ?? null,
