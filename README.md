@@ -2,7 +2,7 @@
 
 An accessible, AI-powered mental wellness app built to support people who can't easily access traditional therapy. Combines an adaptive AI therapist, guided meditation, dream visualization with AI-generated imagery, mood tracking, and a bias-aware cultural filter — all wrapped in a calming, inclusive interface.
 
-**Live demo:** ([https://your-vercel-url.vercel.app](https://adaptive-wellness-companion.vercel.app/)
+**Live demo:** ([https://your-vercel-url.vercel.app](https://adaptive-wellness-companion.vercel.app/))
 
 ---
 
@@ -54,7 +54,7 @@ API keys live exclusively on the backend. The frontend never talks directly to a
 ### 1. Clone & install frontend dependencies
 
 ```bash
-git clone [https://github.com/YOUR-USERNAME/AI-Tools-Team-Project.gi](https://github.com/JHartridge04/Adaptive-Wellness-Companion.git)
+git clone [https://github.com/JHartridge04/Adaptive-Wellness-Companion.git]
 cd AI-Tools-Team-Project
 npm install --legacy-peer-deps
 ```
