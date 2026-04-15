@@ -43,6 +43,8 @@ const Dashboard: React.FC = () => {
   const [creatingSession, setCreatingSession] = useState(false);
   // Prevents double-clicks when creating a new dream visualization session
   const [creatingDream, setCreatingDream] = useState(false);
+  const [creatingJournal, setCreatingJournal] = useState(false);
+  const [creatingMeditation, setCreatingMeditation] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -109,6 +111,30 @@ const Dashboard: React.FC = () => {
     } else {
       setError('Failed to create session. Please try again.');
       setCreatingSession(false);
+    }
+  };
+
+  const handleNewJournalSession = async () => {
+    if (!uid || creatingJournal) return;
+    setCreatingJournal(true);
+    const result = await createSession(uid, 'journal');
+    if (result.success) {
+      navigate(`/sessions/${result.data}`);
+    } else {
+      setError('Failed to start journal session. Please try again.');
+      setCreatingJournal(false);
+    }
+  };
+
+  const handleNewMeditationSession = async () => {
+    if (!uid || creatingMeditation) return;
+    setCreatingMeditation(true);
+    const result = await createSession(uid, 'meditation');
+    if (result.success) {
+      navigate(`/dream/${result.data}`);
+    } else {
+      setError('Failed to start meditation session. Please try again.');
+      setCreatingMeditation(false);
     }
   };
 
@@ -225,13 +251,26 @@ const Dashboard: React.FC = () => {
             disabled={creatingSession}
             onClick={handleNewTherapySession}
           />
-          {/* Alexa — Dream Visualization launcher. Creates a session and opens the viz page. */}
           <QuickAction
             icon="🌙"
             label="Dream Visualization"
             subtitle={creatingDream ? 'Starting...' : undefined}
             disabled={creatingDream}
             onClick={handleNewDreamSession}
+          />
+          <QuickAction
+            icon="📓"
+            label="Journal Entry"
+            subtitle={creatingJournal ? 'Starting...' : undefined}
+            disabled={creatingJournal}
+            onClick={handleNewJournalSession}
+          />
+          <QuickAction
+            icon="🧘"
+            label="Guided Meditation"
+            subtitle={creatingMeditation ? 'Starting...' : undefined}
+            disabled={creatingMeditation}
+            onClick={handleNewMeditationSession}
           />
           <QuickAction
             icon="💜"

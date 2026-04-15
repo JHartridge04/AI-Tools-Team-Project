@@ -6,7 +6,8 @@
       "Bash(cp \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\culturalMirror.css\" \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\src\\\\styles\\\\culturalMirror.css\")",
       "Bash(npx tsc:*)",
       "Bash(ls \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\"/.env*)",
-      "Bash(ls \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\server\"/.env*)"
+      "Bash(ls \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\server\"/.env*)",
+      "Bash(npx --prefix \"c:/Users/james/Downloads/AI-Tools-Team-Project\" tsc --noEmit --project \"c:/Users/james/Downloads/AI-Tools-Team-Project/tsconfig.json\")"
     ]
   }
 }

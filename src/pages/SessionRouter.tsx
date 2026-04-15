@@ -33,7 +33,7 @@ const SessionRouter: React.FC = () => {
         return;
       }
       const { sessionType } = result.data.data;
-      if (sessionType === 'dream_visualization') {
+      if (sessionType === 'dream_visualization' || sessionType === 'meditation') {
         setDestination(`/dream/${sessionId}`);
       } else {
         setDestination(`/sessions/${sessionId}`);

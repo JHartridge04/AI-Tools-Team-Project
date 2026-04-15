@@ -132,7 +132,7 @@ const Settings: React.FC = () => {
         }
       }
       await logout();
-      navigate('/login');
+      navigate('/');
     } else {
       setDeleteError(result.error);
       setDeleting(false);
