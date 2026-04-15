@@ -50,7 +50,7 @@ function reportDoc(reportId: string) {
 /**
  * Generates a shareable therapist report and returns a share token (the document ID).
  *
- * The share link is:  https://yourapp.com/shared-report/{token}
+ * The share link is:  https://adaptive-wellness-companion.vercel.app/shared-report/{token}
  * The token is a Firestore auto-generated ID — effectively unguessable.
  *
  * PRIVACY: Only summaries and mood averages are included. Raw messages are
