@@ -7,7 +7,9 @@
       "Bash(npx tsc:*)",
       "Bash(ls \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\"/.env*)",
       "Bash(ls \"c:\\\\Users\\\\james\\\\Downloads\\\\AI-Tools-Team-Project\\\\server\"/.env*)",
-      "Bash(npx --prefix \"c:/Users/james/Downloads/AI-Tools-Team-Project\" tsc --noEmit --project \"c:/Users/james/Downloads/AI-Tools-Team-Project/tsconfig.json\")"
+      "Bash(npx --prefix \"c:/Users/james/Downloads/AI-Tools-Team-Project\" tsc --noEmit --project \"c:/Users/james/Downloads/AI-Tools-Team-Project/tsconfig.json\")",
+      "Bash(node -e \"require\\('./server/index.js'\\)\")",
+      "Bash(node --check \"c:/Users/james/Downloads/AI-Tools-Team-Project/server/index.js\")"
     ]
   }
 }
