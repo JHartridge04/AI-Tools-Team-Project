@@ -58,15 +58,33 @@ IMPORTANT RULES:
  */
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
+const MEDITATION_SYSTEM_PROMPT = `You are a gentle, grounding guided meditation instructor in a wellness app called "Adaptive Wellness Companion." Your role is to guide users through breath-based, body-awareness, and mindfulness practices.
+
+When the user describes what they need or where they are:
+1. Begin by inviting them to settle: suggest a comfortable position and one slow breath before anything else.
+2. Use gentle, unhurried pacing language: "take a slow breath in," "let your shoulders soften," "notice without judgment," "when your mind wanders, simply return."
+3. Guide awareness through breath, body sensations, and present-moment sounds — not elaborate imagery.
+4. Keep sentences short and spacious. Imply gentle pauses between instructions.
+5. End each response with a grounding phrase that anchors the user in the present moment.
+6. If the user wants to continue or deepen the practice, extend naturally into a body scan, loving-kindness, or open-awareness meditation.
+
+IMPORTANT RULES:
+1. NEVER diagnose or interpret psychological states clinically.
+2. NEVER prescribe or recommend medications.
+3. If the user describes acute distress, gently acknowledge their feelings and suggest speaking with a licensed mental health professional.
+4. You are a wellness companion — not a replacement for real therapy or medical care.`;
+
 async function callVisualizationAI(
   conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
-  systemPromptOverride?: string
+  systemPromptOverride?: string,
+  sessionType?: string
 ): Promise<string> {
   const body = {
     model: 'claude-sonnet-4-6',
     system: systemPromptOverride ?? DREAM_SYSTEM_PROMPT,
     messages: conversationMessages,
     max_tokens: 1024,
+    sessionType: sessionType ?? 'dream_visualization',
   };
 
   const proxyRes = await fetch(`${API_URL}/api/chat`, {
@@ -119,11 +137,15 @@ const DreamVisualization: React.FC = () => {
   // "End Session" loading state — prevents double-clicks
   const [endingSession, setEndingSession] = useState(false);
   // Maps each assistant message ID to its DALL-E image state.
-  // Key absent   → no image for this message yet
-  // 'loading'    → Cultural Mirror + DALL-E running in background
-  // { url, ... } → image ready to display
-  // 'error'      → generation failed; show friendly fallback text
+  // Key absent   → image not yet requested (show "Generate Image" button)
+  // 'loading'    → DALL-E running (button shows loading state)
+  // { url, ... } → image ready to display (button available for regeneration)
+  // 'error'      → generation failed (button available for retry)
   const [imageMap, setImageMap] = useState<Record<string, ImageState>>({});
+  // Maps each assistant message ID to the Cultural Mirror-processed prompt
+  // for that message. Populated when the user sends a message; used by
+  // handleGenerateImage when the user clicks "Generate Image".
+  const [promptMap, setPromptMap] = useState<Record<string, string>>({});
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -194,8 +216,10 @@ const DreamVisualization: React.FC = () => {
 
     // Step 3: Run Claude text generation AND Cultural Mirror bias check in parallel.
     // Text generation drives the UX — Cultural Mirror result only feeds the image prompt.
+    const sessionType = session?.data.sessionType ?? 'dream_visualization';
+    const vizSystemPrompt = sessionType === 'meditation' ? MEDITATION_SYSTEM_PROMPT : DREAM_SYSTEM_PROMPT;
     const [aiSettled, mirrorSettled] = await Promise.allSettled([
-      callVisualizationAI(conversationForAI),
+      callVisualizationAI(conversationForAI, vizSystemPrompt, sessionType),
       checkImagePrompt(text),
     ]);
 
@@ -227,26 +251,40 @@ const DreamVisualization: React.FC = () => {
     const finalRefresh = await getSessionMessages(uid, sessionId);
     if (finalRefresh.success) setMessages(finalRefresh.data);
 
-    // Step 5: Kick off DALL-E 3 image generation in the background.
-    // We mark the message as 'loading' now so the shimmer appears immediately,
-    // then update to the image URL (or 'error') when generation finishes.
-    // setSending(false) is called here so the input re-enables while the image loads.
+    // Step 5: Store the Cultural Mirror-processed prompt so the user can
+    // trigger DALL-E on demand via the "Generate Image" button below
+    // each assistant message. No image is generated automatically.
     const msgId = aiMsgResult.data;
-    setImageMap((prev) => ({ ...prev, [msgId]: 'loading' }));
+    setPromptMap((prev) => ({ ...prev, [msgId]: promptForImage }));
     setSending(false);
+  };
 
-    generateDreamImage(
-      `serene dreamlike visualization: ${promptForImage}, soft watercolor, warm peaceful meditation art`
-    ).then((imgResult) => {
-      if (imgResult.success) {
-        setImageMap((prev) => ({
-          ...prev,
-          [msgId]: { url: imgResult.data.imageUrl, revisedPrompt: imgResult.data.revisedPrompt },
-        }));
-      } else {
-        setImageMap((prev) => ({ ...prev, [msgId]: 'error' }));
-      }
-    });
+  /*
+   * GENERATE IMAGE ON DEMAND
+   *   Called when the user clicks "Generate Image" / "Add Visual Anchor"
+   *   below an assistant message. Uses the Cultural Mirror-processed prompt
+   *   stored in promptMap at submit time.
+   */
+  const handleGenerateImage = async (msgId: string) => {
+    const prompt = promptMap[msgId];
+    if (!prompt) return;
+
+    const sessionType = session?.data.sessionType ?? 'dream_visualization';
+    const styleTag = sessionType === 'meditation'
+      ? 'peaceful mindfulness meditation art, soft gradients, gentle light, minimalist'
+      : 'serene dreamlike visualization, soft watercolor, warm peaceful art';
+
+    setImageMap((prev) => ({ ...prev, [msgId]: 'loading' }));
+
+    const imgResult = await generateDreamImage(`${styleTag}: ${prompt}`);
+    if (imgResult.success) {
+      setImageMap((prev) => ({
+        ...prev,
+        [msgId]: { url: imgResult.data.imageUrl, revisedPrompt: imgResult.data.revisedPrompt },
+      }));
+    } else {
+      setImageMap((prev) => ({ ...prev, [msgId]: 'error' }));
+    }
   };
 
   /*
@@ -271,17 +309,22 @@ const DreamVisualization: React.FC = () => {
       '(e.g. "The user visualized..."). Do not use second-person address, grounding phrases, ' +
       'or embellishment. Describe only what the user explored and the overall mood or theme.';
 
-    let summary = 'Dream visualization session completed.';
+    const endSessionType = session?.data.sessionType ?? 'dream_visualization';
+    const defaultSummary = endSessionType === 'meditation'
+      ? 'Guided meditation session completed.'
+      : 'Dream visualization session completed.';
+    let summary = defaultSummary;
     try {
       summary = await callVisualizationAI(
         [
           ...convoForSummary,
-          { role: 'user', content: 'Summarize this dream visualization session.' },
+          { role: 'user', content: 'Summarize this session.' },
         ],
-        SUMMARY_SYSTEM_PROMPT
+        SUMMARY_SYSTEM_PROMPT,
+        endSessionType
       );
     } catch {
-      summary = 'Dream visualization session ended. (Summary generation failed.)';
+      summary = `${defaultSummary} (Summary generation failed.)`;
     }
 
     // Save the summary and mark the session as completed
@@ -307,6 +350,41 @@ const DreamVisualization: React.FC = () => {
   if (error) return <ErrorMessage error={error} />;
   if (!session) return <ErrorMessage error="Session not found." />;
 
+  const isMeditation = session.data.sessionType === 'meditation';
+
+  // UI copy and icons vary between dream visualization and guided meditation
+  const uiConfig = isMeditation
+    ? {
+        headerIcon: '🧘',
+        defaultTitle: 'Your Meditation',
+        disclaimerPrefix: '🌿 Tell your guide what you need — stillness, focus, or release — and they will lead you there.',
+        emptyIcon: '🌿',
+        emptyHeading: "Tell your guide what you'd like to focus on today.",
+        emptySubtext: 'Your guided meditation will appear here.',
+        sendingLabel: '🌿 Grounding you in the present...',
+        placeholder: 'Tell your guide what you need — calm, focus, sleep, or anything else...',
+        submitLabel: 'Begin 🧘',
+        summaryIcon: '🧘',
+        summaryTitle: 'Meditation Summary',
+        generateImageLabel: '🌿 Add Visual Anchor',
+        aiLabel: '🧘 Your Meditation',
+      }
+    : {
+        headerIcon: '🌙',
+        defaultTitle: 'Dream Visualization',
+        disclaimerPrefix: '✨ Describe a dream, a goal, or a peaceful place — and your guide will paint it for you.',
+        emptyIcon: '🌌',
+        emptyHeading: "Describe a dream, a goal, or a peaceful place you'd like to explore.",
+        emptySubtext: 'Your personalized visualization will appear here.',
+        sendingLabel: '✨ Painting your visualization...',
+        placeholder: 'Describe your dream, goal, or a peaceful place you want to visualize...',
+        submitLabel: 'Visualize ✨',
+        summaryIcon: '🌙',
+        summaryTitle: 'Session Summary',
+        generateImageLabel: '✨ Generate Image',
+        aiLabel: '🌙 Your Visualization',
+      };
+
   return (
     <div
       style={{
@@ -320,9 +398,9 @@ const DreamVisualization: React.FC = () => {
       {/* Session Header */}
       <div className="card" style={{ marginBottom: '1rem', flexShrink: 0, background: 'var(--primary-bg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
-          <span style={{ fontSize: '2rem' }}>🌙</span>
+          <span style={{ fontSize: '2rem' }}>{uiConfig.headerIcon}</span>
           <div>
-            <h2 style={{ margin: 0 }}>{session.data.title || 'Dream Visualization'}</h2>
+            <h2 style={{ margin: 0 }}>{session.data.title || uiConfig.defaultTitle}</h2>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               {session.data.startedAt?.toDate?.()
                 ? session.data.startedAt.toDate().toLocaleString()
@@ -335,7 +413,7 @@ const DreamVisualization: React.FC = () => {
 
         {/* Disclaimer — the AI is a wellness tool, not a therapist */}
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>
-          ✨ Describe a dream, a goal, or a peaceful place — and your guide will paint it for you.
+          {uiConfig.disclaimerPrefix}{' '}
           This is a wellness tool and is <strong>not a replacement for professional mental health care</strong>.
         </p>
       </div>
@@ -361,22 +439,26 @@ const DreamVisualization: React.FC = () => {
               fontStyle: 'italic',
             }}
           >
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌌</div>
-            <p>Describe a dream, a goal, or a peaceful place you'd like to explore.</p>
-            <p style={{ fontSize: '0.85rem' }}>Your personalized visualization will appear here.</p>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{uiConfig.emptyIcon}</div>
+            <p>{uiConfig.emptyHeading}</p>
+            <p style={{ fontSize: '0.85rem' }}>{uiConfig.emptySubtext}</p>
           </div>
         )}
 
-        {/* Render each message — assistant messages show a DALL-E image when ready */}
+        {/* Render each message — assistant messages show a DALL-E image when generated */}
         {messages.map((msg) => (
           <VisualizationMessage
             key={msg.id}
             message={msg.data}
             imageState={msg.data.role === 'assistant' ? imageMap[msg.id] : undefined}
+            canGenerateImage={msg.data.role === 'assistant' && msg.id in promptMap}
+            onGenerateImage={msg.data.role === 'assistant' ? () => handleGenerateImage(msg.id) : undefined}
+            aiLabel={uiConfig.aiLabel}
+            generateImageLabel={uiConfig.generateImageLabel}
           />
         ))}
 
-        {/* "Visualizing..." indicator while the AI is generating */}
+        {/* Sending indicator while the AI is generating */}
         {sending && (
           <div
             style={{
@@ -387,7 +469,7 @@ const DreamVisualization: React.FC = () => {
               padding: '1rem',
             }}
           >
-            ✨ Painting your visualization...
+            {uiConfig.sendingLabel}
           </div>
         )}
 
@@ -412,7 +494,7 @@ const DreamVisualization: React.FC = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe your dream, goal, or a peaceful place you want to visualize..."
+            placeholder={uiConfig.placeholder}
             rows={2}
             maxLength={2000}
             style={{ resize: 'none', flex: 1 }}
@@ -426,7 +508,7 @@ const DreamVisualization: React.FC = () => {
               disabled={sending || !inputText.trim() || endingSession}
               style={{ whiteSpace: 'nowrap' }}
             >
-              {sending ? '...' : 'Visualize ✨'}
+              {sending ? '...' : uiConfig.submitLabel}
             </button>
             {/* End Session button — generates summary and closes the session */}
             <button
@@ -454,7 +536,7 @@ const DreamVisualization: React.FC = () => {
             marginTop: '0.75rem',
           }}
         >
-          <h4 style={{ marginBottom: '0.4rem', color: 'var(--primary)' }}>🌙 Session Summary</h4>
+          <h4 style={{ marginBottom: '0.4rem', color: 'var(--primary)' }}>{uiConfig.summaryIcon} {uiConfig.summaryTitle}</h4>
           <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>{session.data.summary}</p>
         </div>
       )}
@@ -473,7 +555,15 @@ const DreamVisualization: React.FC = () => {
 const VisualizationMessage: React.FC<{
   message: Message;
   imageState?: ImageState;
-}> = ({ message, imageState }) => {
+  /** True when a Cultural Mirror prompt is ready and the user can trigger generation */
+  canGenerateImage?: boolean;
+  /** Called when the user clicks the generate / regenerate button */
+  onGenerateImage?: () => void;
+  /** Label for the AI message header (e.g. "🌙 Your Visualization") */
+  aiLabel?: string;
+  /** Label for the generate-image button */
+  generateImageLabel?: string;
+}> = ({ message, imageState, canGenerateImage, onGenerateImage, aiLabel, generateImageLabel }) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
@@ -541,12 +631,12 @@ const VisualizationMessage: React.FC<{
         }}
       >
         <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, marginBottom: '0.5rem' }}>
-          🌙 Your Visualization
+          {aiLabel ?? '🌙 Your Visualization'}
         </div>
 
         {/* Image column (shimmer / actual image / error) and text column */}
         <div className="dv-visual-layout">
-          {/* Image area — only rendered when there is an image state for this message */}
+          {/* Image area — only rendered once the user has triggered generation */}
           {imageState !== undefined && (
             <div className="dv-image-col">
               {imageIsLoading && (
@@ -559,7 +649,7 @@ const VisualizationMessage: React.FC<{
                 <>
                   <img
                     src={imageData.url}
-                    alt="AI-generated dream visualization"
+                    alt="AI-generated visualization"
                     className="dv-image"
                   />
                   <p className="dv-image-caption">
@@ -569,19 +659,37 @@ const VisualizationMessage: React.FC<{
               )}
               {imageIsError && (
                 <p className="dv-image-error">
-                  We couldn't generate an image right now, but your visualization is ready below.
+                  We couldn't generate an image right now. Try again below.
                 </p>
               )}
             </div>
           )}
 
-          {/* Visualization text */}
+          {/* Visualization / meditation text */}
           <div className="dv-text-col">
             <p style={{ fontSize: '0.95rem', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>
               {message.content}
             </p>
           </div>
         </div>
+
+        {/* Generate / Regenerate image button — only for assistant messages with a ready prompt */}
+        {canGenerateImage && onGenerateImage && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <button
+              className="btn btn-outline"
+              onClick={onGenerateImage}
+              disabled={imageIsLoading}
+              style={{ fontSize: '0.8rem', padding: '0.3rem 0.85rem' }}
+            >
+              {imageIsLoading
+                ? '⏳ Generating...'
+                : imageData
+                  ? '🔄 Regenerate Image'
+                  : (generateImageLabel ?? '✨ Generate Image')}
+            </button>
+          </div>
+        )}
 
         <div style={{ fontSize: '0.7rem', marginTop: '0.5rem', opacity: 0.6, textAlign: 'right' }}>
           {message.timestamp?.toDate?.()

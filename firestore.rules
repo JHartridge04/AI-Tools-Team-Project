@@ -41,9 +41,9 @@ service cloud.firestore {
         && request.resource.data.preferredTherapyMode in ["talk", "guided_visualization", "exploratory"]
         && request.resource.data.onboardingComplete is bool;
 
-      // Account deletion is handled by the privacyService Cloud Function
-      // which runs with admin privileges. Deny client-side deletes.
-      allow delete: if false;
+      // Account deletion is performed client-side by privacyService.ts.
+      // Only the owner may delete their own profile document.
+      allow delete: if isOwner(uid);
 
       // ── /users/{uid}/sessions — therapy/visualization/journal sessions ───
       //
@@ -115,8 +115,9 @@ service cloud.firestore {
     //
     // DELETE: only the document owner can revoke a shared link.
     match /sharedReports/{reportId} {
-      allow read: if notExpired(resource.data.expiresAt)
-                  && resource.data.accessCount < resource.data.maxAccesses;
+      allow read: if (notExpired(resource.data.expiresAt)
+                      && resource.data.accessCount < resource.data.maxAccesses)
+                  || (isAuthenticated() && request.auth.uid == resource.data.userId);
 
       allow create: if isAuthenticated()
         && request.auth.uid == request.resource.data.userId

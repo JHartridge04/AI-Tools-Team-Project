@@ -96,10 +96,39 @@ IMPORTANT RULES:
  */
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
+function buildJournalSystemPrompt(
+  contextSummaries: Array<{ sessionType: SessionType; summary: string; date: string }>
+): string {
+  let prompt = `You are a warm, encouraging journaling companion in a wellness app called "Adaptive Wellness Companion." Your role is to help users reflect on their thoughts, feelings, and experiences through open-ended questions and gentle curiosity.
+
+Your approach:
+- Ask reflective questions to help the user explore their inner world: "What stood out about today?", "What are you grateful for?", "What's been weighing on you?", "What do you need right now?"
+- Acknowledge and validate what the user shares before responding or asking anything new
+- Help the user notice patterns, name emotions, and find meaning in their experiences
+- Keep the tone warm, curious, and non-judgmental — like a trusted friend, not a clinician
+- Responses should be brief: 1–2 short paragraphs, then one open reflective question
+
+IMPORTANT RULES:
+1. NEVER diagnose any mental health condition.
+2. NEVER prescribe or recommend medications.
+3. For serious concerns, gently encourage the user to seek a licensed professional.
+4. This is a reflective journaling space — stay focused on the user's day, thoughts, and feelings.`;
+
+  if (contextSummaries.length > 0) {
+    prompt += `\n\nHere are summaries from the user's recent sessions for context and continuity:\n`;
+    contextSummaries.forEach((s, i) => {
+      prompt += `\n${i + 1}. [${s.sessionType.replace('_', ' ')} — ${s.date ? new Date(s.date).toLocaleDateString() : 'unknown date'}]: ${s.summary}`;
+    });
+  }
+
+  return prompt;
+}
+
 async function callTherapistAI(
   systemPrompt: string,
   conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
-  isCrisis: boolean
+  isCrisis: boolean,
+  sessionType: SessionType = 'therapy'
 ): Promise<string> {
   // If the user is in crisis, add a safety instruction to the system prompt
   let finalSystem = systemPrompt;
@@ -112,6 +141,7 @@ async function callTherapistAI(
     system: finalSystem,
     messages: conversationMessages,
     max_tokens: 1024,
+    sessionType,
   };
 
   // --- Attempt 1: Backend proxy (recommended) ---
@@ -265,11 +295,14 @@ const SessionDetail: React.FC = () => {
       .filter((m) => m.data.role === 'user' || m.data.role === 'assistant')
       .map((m) => ({ role: m.data.role as 'user' | 'assistant', content: m.data.content }));
 
-    // Step 5: Call the Claude API
-    const systemPrompt = buildSystemPrompt(context);
+    // Step 5: Call the Claude API with a system prompt matched to the session type
+    const sessionType = session?.data.sessionType ?? 'therapy';
+    const systemPrompt = sessionType === 'journal'
+      ? buildJournalSystemPrompt(context)
+      : buildSystemPrompt(context);
     let aiResponse: string;
     try {
-      aiResponse = await callTherapistAI(systemPrompt, conversationForAI, isCrisis || crisisDetected);
+      aiResponse = await callTherapistAI(systemPrompt, conversationForAI, isCrisis || crisisDetected, sessionType);
     } catch {
       aiResponse = "I'm sorry, I'm having trouble connecting right now. Please try again in a moment, or reach out to a trusted person if you need support.";
     }

@@ -149,6 +149,7 @@ const MoodTracker: React.FC = () => {
             {availableTags.map((tag) => (
               <button
                 key={tag}
+                type="button"
                 onClick={() => toggleTag(tag)}
                 style={{
                   padding: '0.35rem 0.75rem',
@@ -158,6 +159,7 @@ const MoodTracker: React.FC = () => {
                   background: selectedTags.includes(tag) ? 'var(--primary-bg)' : 'transparent',
                   color: selectedTags.includes(tag) ? 'var(--primary)' : 'var(--text-muted)',
                   fontSize: '0.85rem',
+                  cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}
               >

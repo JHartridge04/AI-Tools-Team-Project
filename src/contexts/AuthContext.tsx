@@ -81,7 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function resetPassword(email: string): Promise<void> {
-    await sendPasswordResetEmail(auth, email);
+    // actionCodeSettings tells Firebase where to redirect after password reset.
+    // This ensures the "Continue" link in the email points to the deployed app.
+    const actionCodeSettings = {
+      url: window.location.origin + "/login",
+      handleCodeInApp: false,
+    };
+    await sendPasswordResetEmail(auth, email, actionCodeSettings);
   }
 
   const value: AuthContextValue = {

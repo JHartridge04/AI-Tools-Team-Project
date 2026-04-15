@@ -27,11 +27,11 @@ export default function ForgotPassword() {
     try {
       setLoading(true);
       await resetPassword(emailRef.current.value.trim());
-      // Generic success — don't reveal whether the email exists in our system
       setMessage(
-        "If an account with that email exists, a reset link has been sent. Check your inbox (and spam folder)."
+        "If an account with that email exists, a reset link has been sent. Check your inbox and spam/junk folder — the email comes from noreply@firebaseapp.com."
       );
     } catch (err) {
+      console.error("[ForgotPassword] Error:", err.code, err.message);
       setError(friendlyAuthError(err.code));
     } finally {
       setLoading(false);

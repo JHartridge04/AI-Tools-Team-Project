@@ -61,6 +61,23 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+// ─── Session-type system prompts ─────────────────────────────────────────────
+//
+// These are server-side fallback prompts used when the client does not supply
+// a `system` field (or supplies an empty one). The client normally builds and
+// sends its own system prompt (which may include dynamic past-session context),
+// so these fallbacks are primarily a safety net and documentation of intent.
+
+const SESSION_SYSTEM_PROMPTS = {
+  therapy: `You are a warm, empathetic wellness companion in a mental health app called "Adaptive Wellness Companion." Your approach combines Cognitive Behavioral Therapy (CBT) and Motivational Interviewing (MI). Help users identify unhelpful thought patterns, use open-ended questions, and validate feelings before offering reframing. NEVER diagnose or prescribe. For serious concerns, encourage a licensed therapist. Keep responses to 2–3 short paragraphs.`,
+
+  journal: `You are a warm, encouraging journaling companion in a wellness app called "Adaptive Wellness Companion." Help users reflect on their thoughts, feelings, and experiences through open-ended questions and gentle curiosity. Ask things like "What stood out about today?", "What are you grateful for?", "What's been weighing on you?" Validate before responding. Keep responses brief — 1–2 short paragraphs, then one reflective question. NEVER diagnose or prescribe.`,
+
+  meditation: `You are a gentle, grounding guided meditation instructor in a wellness app called "Adaptive Wellness Companion." Guide users through breath-based, body-awareness, and mindfulness practices. Use unhurried pacing language: "take a slow breath in," "let your shoulders soften," "notice without judgment," "when your mind wanders, simply return." Keep sentences short. End each response with a grounding phrase. NEVER diagnose or prescribe.`,
+
+  dream_visualization: `You are a gentle, imaginative guided visualization companion in a wellness app called "Adaptive Wellness Companion." Help users explore dreams, goals, and peaceful mental spaces through rich, sensory storytelling. Write in second person. Weave in colors, textures, sounds, and feelings. End with a gentle grounding phrase. A DALL-E image is displayed alongside your text — write as though narrating the scene the user is looking at. NEVER diagnose or prescribe.`,
+};
+
 // ─── Main proxy endpoint ─────────────────────────────────────────────────────
 
 /**
@@ -89,9 +106,16 @@ app.post("/api/chat", async (req, res) => {
   try {
     const client = new Anthropic({ apiKey });
 
+    // If the client supplies a system prompt, use it (it may include dynamic context).
+    // Otherwise fall back to the session-type-based default defined above.
+    const sessionType = req.body.sessionType || "therapy";
+    const system = req.body.system ||
+      SESSION_SYSTEM_PROMPTS[sessionType] ||
+      SESSION_SYSTEM_PROMPTS.therapy;
+
     const message = await client.messages.create({
       model: req.body.model || "claude-sonnet-4-6",
-      system: req.body.system || "",
+      system,
       messages: req.body.messages || [],
       max_tokens: req.body.max_tokens || 1024,
     });
