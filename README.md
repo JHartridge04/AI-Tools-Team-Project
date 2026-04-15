@@ -54,7 +54,7 @@ API keys live exclusively on the backend. The frontend never talks directly to a
 ### 1. Clone & install frontend dependencies
 
 ```bash
-git clone [https://github.com/JHartridge04/Adaptive-Wellness-Companion.git]
+git clone https://github.com/JHartridge04/Adaptive-Wellness-Companion.git
 cd AI-Tools-Team-Project
 npm install --legacy-peer-deps
 ```
